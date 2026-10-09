@@ -1,0 +1,1875 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141416">
+<meta name="description" content="Editor foto gratis yang berjalan di HP: atur warna, filter, teks, bingkai, kolase, dan hapus latar dengan AI.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Rupa Editor Foto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,700&display=swap">
+<style>
+/* Layout: satu layar seperti aplikasi HP — bilah atas, panggung foto, panel alat, tab bawah. Tampilan gelap disengaja agar warna foto dinilai dengan jujur. */
+:root{
+  color-scheme: dark;
+  --bg:#141416;
+  --stage:#0D0D0F;
+  --panel:#1C1C20;
+  --line:#2B2B31;
+  --fg:#EDEBE5;
+  --muted:#9C9A92;
+  --accent:#F2C14E;
+  --accent-ink:#1E1704;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+[hidden]{display:none!important}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;-webkit-tap-highlight-color:transparent;overflow:hidden}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;max-width:900px;margin:0 auto}
+
+/* Bilah atas */
+.top{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em;margin-right:auto;display:flex;align-items:baseline;gap:8px;min-width:0}
+.brand small{min-width:0;font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:transparent}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.iconbtn svg{width:20px;height:20px}
+.openbtn{position:relative;cursor:pointer;height:40px;padding:0 14px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.filein{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.openbtn:focus-within,.btn:focus-within{outline:2px solid var(--fg);outline-offset:2px}
+.openbtn svg{width:18px;height:18px}
+
+/* Panggung */
+.stage{position:relative;background:var(--stage);display:grid;place-items:center;padding:14px 16px 56px;overflow:hidden}
+.wrap{position:relative;line-height:0;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none}
+#view{width:100%;height:100%;display:block;background:repeating-conic-gradient(#3B3B42 0% 25%, #26262B 0% 50%) 50%/18px 18px}
+#colView{display:block;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none;max-width:100%}
+.clip{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.chip-sample{position:absolute;left:16px;top:14px;font-size:12px;background:rgba(20,20,22,.8);border:1px solid var(--line);padding:5px 10px;border-radius:999px;color:var(--muted)}
+.compare{position:absolute;right:16px;top:14px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.85);font-size:13px;user-select:none;-webkit-user-select:none;touch-action:none}
+.compare.on{background:var(--fg);color:var(--bg)}
+.drop{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:14px;display:grid;place-items:center;background:rgba(13,13,15,.8);font-weight:600}
+.stagehint{position:absolute;left:16px;right:16px;bottom:16px;text-align:center;font-size:12.5px;color:var(--muted)}
+
+/* Kotak potong */
+.crop{position:absolute;border:1.5px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);touch-action:none;cursor:move;pointer-events:auto}
+.crop::before,.crop::after{content:"";position:absolute;inset:0;pointer-events:none}
+.crop::before{border-left:1px solid rgba(255,255,255,.35);border-right:1px solid rgba(255,255,255,.35);left:33.33%;right:33.33%}
+.crop::after{border-top:1px solid rgba(255,255,255,.35);border-bottom:1px solid rgba(255,255,255,.35);top:33.33%;bottom:33.33%}
+.handle{position:absolute;width:38px;height:38px;touch-action:none;display:grid}
+.handle::after{content:"";width:18px;height:18px;border:0 solid var(--accent)}
+.nw{left:-2px;top:-2px;cursor:nwse-resize;place-items:start}.nw::after{border-left-width:4px;border-top-width:4px}
+.ne{right:-2px;top:-2px;cursor:nesw-resize;place-items:start end}.ne::after{border-right-width:4px;border-top-width:4px}
+.sw{left:-2px;bottom:-2px;cursor:nesw-resize;place-items:end start}.sw::after{border-left-width:4px;border-bottom-width:4px}
+.se{right:-2px;bottom:-2px;cursor:nwse-resize;place-items:end}.se::after{border-right-width:4px;border-bottom-width:4px}
+.cropsize{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--f-mono);font-size:11px;line-height:1.4;background:rgba(0,0,0,.65);color:#fff;padding:3px 7px;border-radius:5px;pointer-events:none;white-space:pre}
+
+/* Kotak pilihan teks */
+.sel{position:absolute;left:0;top:0;border:1.5px dashed #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);pointer-events:none;transform-origin:center}
+.selh{position:absolute;right:-17px;bottom:-17px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;pointer-events:auto;touch-action:none;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.selh svg{width:18px;height:18px}
+.seltools{position:absolute;left:16px;right:16px;bottom:10px;display:flex;justify-content:center;gap:6px}
+.seltools button{height:36px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.92);font-size:13px;white-space:nowrap}
+.seltools .del{color:#F3A196}
+
+/* Panel alat */
+.panel{background:var(--panel);border-top:1px solid var(--line);padding:14px 16px 12px;min-height:186px;max-height:46vh;overflow-y:auto}
+.pane{display:flex;flex-direction:column;gap:12px}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr) 46px;align-items:center;gap:10px}
+.row label{font-size:14px;color:var(--fg)}
+.val{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;background:none;border:0;padding:4px 0}
+.val.changed{color:var(--accent)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--fg);margin-top:-8.5px;border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--fg);border:3px solid var(--panel)}
+input[type=range].changed::-webkit-slider-thumb{background:var(--accent)}
+input[type=range].changed::-moz-range-thumb{background:var(--accent)}
+.hint{font-size:13px;color:var(--muted);margin:0;line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:14px;white-space:nowrap;flex:none}
+.chip[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:transparent;font-weight:600;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid var(--line);background:transparent;font-size:13px}
+.tool svg{width:24px;height:24px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field span{font-size:13px;color:var(--muted)}
+select{height:42px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 10px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.out{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.custom{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.custom .field{width:110px}
+.custom input,.textin{height:42px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 12px;width:100%}
+.custom input{font-family:var(--f-mono)}
+.times{padding-bottom:11px;color:var(--muted)}
+.sub{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 -4px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
+
+/* Filter & bingkai: deretan pratinjau */
+.thumbs{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.fbtn{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;font-size:12px;color:var(--muted)}
+.fbtn canvas{width:68px;height:68px;border-radius:10px;border:2px solid transparent;display:block;background:var(--bg)}
+.fbtn[aria-pressed=true]{color:var(--fg)}
+.fbtn[aria-pressed=true] canvas{border-color:var(--accent)}
+
+/* Teks */
+textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;line-height:1.4}
+.tpl{height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);flex:none;font-size:17px;line-height:1;color:#fff}
+.seg{display:inline-grid;grid-auto-flow:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{height:36px;padding:0 14px;border:0;background:transparent;font-size:14px}
+.seg button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw-btn{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);padding:0;flex:none;display:block}
+.sw-btn[aria-pressed=true]{outline:2px solid var(--accent);outline-offset:2px}
+.sw-none{background:linear-gradient(135deg,transparent 45%,#F3A196 45%,#F3A196 55%,transparent 55%),var(--bg)}
+.sw-pick{position:relative;overflow:hidden;background:conic-gradient(#f55,#fd5,#5f8,#5cf,#a6f,#f55);cursor:pointer}
+.sw-pick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px}
+.toggle input{width:22px;height:22px;accent-color:var(--accent)}
+
+/* Pustaka font */
+.fontbox{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.fontcur{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fontcur b{font-size:20px;font-weight:400;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fontcur span{font-size:12px;color:var(--muted);white-space:nowrap}
+.fontlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:212px;overflow-y:auto}
+.fitem{height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel);padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left;min-width:0}
+.fitem .nm{font-size:17px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fitem .tag{font-family:var(--f-body);font-size:10.5px;color:var(--muted);flex:none;display:flex;align-items:center;gap:3px}
+.fitem .tag svg{width:13px;height:13px}
+.fitem[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.fitem.loading{opacity:.6}
+.fontmore{display:flex;gap:8px}
+.fontmore .textin{flex:1;min-width:0}
+
+/* Kolase */
+.layouts{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.lbtn{flex:none;width:52px;height:52px;border-radius:10px;border:2px solid var(--line);background:transparent;padding:6px;display:grid;place-items:center}
+.lbtn[aria-pressed=true]{border-color:var(--accent)}
+.lbtn canvas{width:36px;height:36px;display:block}
+
+/* Tab bawah */
+.tabs{display:grid;grid-template-columns:repeat(8,1fr);border-top:1px solid var(--line);background:var(--bg);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab{background:none;border:0;padding:10px 0 12px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);position:relative;min-width:0}
+.tab svg{width:21px;height:21px}
+.tab[aria-selected=true]{color:var(--fg)}
+.tab[aria-selected=true]::before{content:"";position:absolute;top:0;left:26%;right:26%;height:2px;background:var(--accent);border-radius:0 0 2px 2px}
+
+.toast{position:fixed;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);text-align:center;z-index:5}
+.busy{position:absolute;inset:0;display:grid;place-items:center;background:rgba(13,13,15,.6);font-size:14px}
+.brushcur{position:absolute;left:0;top:0;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-50%)}
+.mcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px;border-radius:12px;border:1px solid var(--line);background:transparent;text-align:left;min-width:0}
+.mcard b{font-size:15px}
+.mcard span{font-size:12px;color:var(--muted)}
+.mcard em{font-style:normal;font-size:11.5px;font-family:var(--f-mono);color:var(--muted)}
+.mcard em.ok{color:#7FD3A2}
+.mcard[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.progress{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.note{font-size:13px;line-height:1.45;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);background:var(--bg);margin:0}
+@media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{opacity:0;transform:translate(-50%,-8px)}}}
+@media (max-width:400px){.top{gap:6px}.openbtn{padding:0 12px}.row{grid-template-columns:84px minmax(0,1fr) 40px}.brand small{display:none}.tab{font-size:10.5px}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">Rupa <small id="dims">—</small></div>
+    <button class="iconbtn" id="undo" aria-label="Urungkan" title="Urungkan" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
+    </button>
+    <button class="iconbtn" id="redo" aria-label="Ulangi" title="Ulangi" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg>
+    </button>
+    <label class="openbtn" id="openBtn" for="file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+      Buka foto
+      <input type="file" id="file" accept="image/*" class="filein">
+    </label>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="wrap" id="wrap">
+      <canvas id="view" width="10" height="10"></canvas>
+      <div class="clip">
+        <div class="crop" id="crop" hidden><span class="cropsize" id="cropSize"></span><div class="handle nw" data-h="nw"></div><div class="handle ne" data-h="ne"></div><div class="handle sw" data-h="sw"></div><div class="handle se" data-h="se"></div></div>
+      </div>
+      <div class="brushcur" id="brushCur" hidden></div>
+      <div class="sel" id="sel" hidden>
+        <div class="selh" id="selHandle" aria-label="Putar dan ubah ukuran">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        </div>
+      </div>
+    </div>
+    <canvas id="colView" hidden></canvas>
+    <span class="chip-sample" id="sampleChip">Contoh foto</span>
+    <button class="compare" id="compare" aria-label="Tahan untuk melihat foto asli">Tahan: asli</button>
+    <p class="stagehint" id="colHint" hidden>Ketuk kotak kosong untuk memilih foto. Geser foto di dalam kotak untuk mengatur posisinya.</p>
+    <div class="seltools" id="selTools" hidden>
+      <button id="layDel" class="del">Hapus</button>
+      <button id="layDup">Salin</button>
+      <button id="layUp">Depan</button>
+      <button id="layDown">Belakang</button>
+      <button id="layDone">Selesai</button>
+    </div>
+    <div class="drop" id="drop" hidden>Lepaskan foto di sini</div>
+    <div class="busy" id="busy" hidden>Memproses…</div>
+  </main>
+
+  <section class="panel">
+    <!-- ATUR -->
+    <div class="pane" id="pane-atur">
+      <div id="sliders" class="pane"></div>
+      <div class="actions"><button class="btn" id="resetAdj">Kembalikan semua</button></div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="pane" id="pane-filter" hidden>
+      <div class="chips scroll" id="fcats"></div>
+      <div class="thumbs" id="filters"></div>
+      <div class="row" id="famtRow">
+        <label for="famt">Kekuatan</label>
+        <input type="range" id="famt" min="0" max="100" step="1" value="100">
+        <span class="val" id="famtVal">100</span>
+      </div>
+    </div>
+
+    <!-- POTONG & PUTAR -->
+    <div class="pane" id="pane-potong" hidden>
+      <p class="hint">Geser kotak untuk memindah. Tarik salah satu sudut kuning untuk mengubah ukuran.</p>
+      <div class="chips" id="ratios">
+        <button class="chip" data-r="free" aria-pressed="true">Bebas</button>
+        <button class="chip" data-r="orig">Asli</button>
+        <button class="chip" data-r="1">1:1</button>
+        <button class="chip" data-r="0.8">4:5 Instagram</button>
+        <button class="chip" data-r="0.75">3:4</button>
+        <button class="chip" data-r="0.6667">2:3</button>
+        <button class="chip" data-r="1.5">3:2</button>
+        <button class="chip" data-r="1.7778">16:9 YouTube</button>
+        <button class="chip" data-r="0.5625">9:16 Story</button>
+        <button class="chip" data-r="custom">Ukuran sendiri</button>
+      </div>
+      <div class="custom" id="customRow" hidden>
+        <label class="field"><span>Lebar (px)</span><input type="number" id="cw" min="16" max="8000" value="1080" inputmode="numeric"></label>
+        <span class="times">×</span>
+        <label class="field"><span>Tinggi (px)</span><input type="number" id="ch" min="16" max="8000" value="1350" inputmode="numeric"></label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="applyCrop">Terapkan potongan</button>
+        <button class="btn" id="resetCrop">Atur ulang kotak</button>
+      </div>
+      <hr class="sep">
+      <div class="grid4">
+        <button class="tool" id="rotL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Putar kiri</button>
+        <button class="tool" id="rotR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Putar kanan</button>
+        <button class="tool" id="flipH"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="m16 7 5 5-5 5V7z"/></svg>Balik datar</button>
+        <button class="tool" id="flipV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M7 8l5-5 5 5H7z"/><path d="m7 16 5 5 5-5H7z"/></svg>Balik tegak</button>
+      </div>
+    </div>
+
+    <!-- TEKS -->
+    <div class="pane" id="pane-teks" hidden>
+      <div class="sub">Pilih gaya untuk menambah teks</div>
+      <div class="chips scroll" id="tpls"></div>
+      <p class="hint" id="textHint">Ketuk teks di foto untuk mengubahnya. Geser untuk memindah, tarik tombol kuning untuk memutar dan mengubah ukuran.</p>
+      <div class="pane" id="textEdit" hidden>
+        <textarea id="txt" aria-label="Isi teks" rows="2"></textarea>
+
+        <div class="fontbox">
+          <div class="fontcur"><b id="fontCur">Figtree</b><span id="fontCount"></span></div>
+          <div class="chips scroll" id="fontCats"></div>
+          <div class="fontlist" id="fontList"></div>
+          <div class="sub">Font lain</div>
+          <div class="fontmore">
+            <input class="textin" id="fontSearch" placeholder="Nama font Google, mis. Lato" autocomplete="off" enterkeyhint="go">
+            <button class="btn" id="fontGet">Unduh</button>
+          </div>
+          <div class="actions">
+            <label class="btn" for="fontFile">Pasang file font dari HP<input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2,font/*" class="filein"></label>
+          </div>
+          <p class="hint">Daftar lengkap ada di <a href="https://fonts.google.com" target="_blank" rel="noopener">fonts.google.com</a>. Font hanya diunduh saat kamu memilihnya.</p>
+        </div>
+
+        <div class="seg" id="colorTarget">
+          <button data-t="color" aria-pressed="true">Huruf</button>
+          <button data-t="stroke" aria-pressed="false">Garis tepi</button>
+          <button data-t="bg" aria-pressed="false">Latar</button>
+        </div>
+        <div class="swatches" id="textSw"></div>
+        <div class="row" id="strokeRow"><label for="strokeW">Tebal garis</label><input type="range" id="strokeW" min="0" max="30" value="0"><span class="val" id="strokeWVal">0</span></div>
+        <div class="row"><label for="textOp">Transparansi</label><input type="range" id="textOp" min="10" max="100" value="100"><span class="val" id="textOpVal">100</span></div>
+        <label class="toggle">Bayangan<input type="checkbox" id="shadow"></label>
+      </div>
+    </div>
+
+    <!-- BINGKAI -->
+    <div class="pane" id="pane-bingkai" hidden>
+      <div class="thumbs" id="frames"></div>
+      <div class="pane" id="frameEdit" hidden>
+        <div class="swatches" id="frameSw"></div>
+        <div class="row"><label for="frSize">Ketebalan</label><input type="range" id="frSize" min="1" max="20" value="5"><span class="val" id="frSizeVal">5</span></div>
+        <div class="row"><label for="frRad">Sudut bulat</label><input type="range" id="frRad" min="0" max="50" value="0"><span class="val" id="frRadVal">0</span></div>
+      </div>
+    </div>
+
+    <!-- KOLASE -->
+    <div class="pane" id="pane-kolase" hidden>
+      <div class="sub">Tata letak</div>
+      <div class="layouts" id="layouts"></div>
+      <div class="chips scroll" id="colRatios">
+        <button class="chip" data-r="1" aria-pressed="true">1:1</button>
+        <button class="chip" data-r="0.8">4:5</button>
+        <button class="chip" data-r="0.75">3:4</button>
+        <button class="chip" data-r="0.5625">9:16</button>
+        <button class="chip" data-r="1.7778">16:9</button>
+      </div>
+      <div class="actions">
+        <label class="btn" for="colFiles">Tambah foto<input type="file" id="colFiles" accept="image/*" multiple class="filein"></label>
+        <button class="btn primary" id="colUse">Pakai kolase</button>
+      </div>
+      <input type="file" id="colOne" accept="image/*" hidden>
+      <div class="pane" id="cellEdit" hidden>
+        <hr class="sep">
+        <div class="sub">Kotak terpilih</div>
+        <div class="row"><label for="cellZoom">Perbesar</label><input type="range" id="cellZoom" min="100" max="300" value="100"><span class="val" id="cellZoomVal">100</span></div>
+        <div class="actions">
+          <label class="btn" for="cellFile">Ganti foto<input type="file" id="cellFile" accept="image/*" class="filein"></label>
+          <button class="btn" id="cellClear">Kosongkan</button>
+        </div>
+      </div>
+      <hr class="sep">
+      <div class="row"><label for="colGap">Jarak</label><input type="range" id="colGap" min="0" max="10" value="2"><span class="val" id="colGapVal">2</span></div>
+      <div class="row"><label for="colRad">Sudut bulat</label><input type="range" id="colRad" min="0" max="50" value="0"><span class="val" id="colRadVal">0</span></div>
+      <div class="sub">Warna latar</div>
+      <div class="swatches" id="colSw"></div>
+    </div>
+
+    <!-- AI -->
+    <div class="pane" id="pane-ai" hidden>
+      <div class="sub">Hapus latar belakang</div>
+      <p class="hint">Memisahkan orang atau benda dari latarnya. Semua diproses di HP-mu, fotonya tidak dikirim ke mana pun.</p>
+      <p class="note" id="aiViewerNote" hidden>Di tampilan Claude, fitur AI tidak bisa jalan karena pembatasan keamanan. Buka Rupa dari hostingmu sendiri untuk memakainya.</p>
+      <div class="two" id="models">
+        <button class="mcard" data-m="cepat" aria-pressed="true"><b>Cepat</b><span>4,6 MB · ringan untuk semua HP</span><em id="st-cepat">Belum diunduh</em></button>
+        <button class="mcard" data-m="detail" aria-pressed="false"><b>Detail</b><span>44 MB · tepi lebih rapi</span><em id="st-detail">Belum diunduh</em></button>
+      </div>
+      <div class="actions" id="aiRunRow"><button class="btn primary" id="aiRun">Hapus latar belakang</button></div>
+      <div class="pane" id="aiProg" hidden><div class="progress"><i id="aiBar"></i></div><p class="hint" id="aiMsg">Menyiapkan…</p></div>
+      <div class="pane" id="aiEdit" hidden>
+        <div class="sub">Latar baru</div>
+        <div class="chips" id="bgModes">
+          <button class="chip" data-b="transparent" aria-pressed="true">Transparan</button>
+          <button class="chip" data-b="color" aria-pressed="false">Warna</button>
+          <button class="chip" data-b="blur" aria-pressed="false">Blur foto asli</button>
+        </div>
+        <div class="swatches" id="bgSw" hidden></div>
+        <div class="row" id="bgBlurRow" hidden><label for="bgBlur">Kekuatan</label><input type="range" id="bgBlur" min="2" max="40" value="12"><span class="val" id="bgBlurVal">12</span></div>
+        <div class="sub">Rapikan dengan kuas</div>
+        <div class="seg" id="brushMode">
+          <button data-b="off" aria-pressed="true">Mati</button>
+          <button data-b="erase" aria-pressed="false">Hapus</button>
+          <button data-b="restore" aria-pressed="false">Kembalikan</button>
+        </div>
+        <div class="row" id="brushRow" hidden><label for="bSize">Ukuran kuas</label><input type="range" id="bSize" min="8" max="90" value="34"><span class="val" id="bSizeVal">34</span></div>
+        <div class="row"><label for="aiFeather">Tepi halus</label><input type="range" id="aiFeather" min="0" max="10" value="2"><span class="val" id="aiFeatherVal">2</span></div>
+        <div class="row"><label for="aiHard">Ketegasan</label><input type="range" id="aiHard" min="0" max="10" value="0"><span class="val" id="aiHardVal">0</span></div>
+        <div class="actions"><button class="btn primary" id="aiApply">Terapkan</button><button class="btn" id="aiCancel">Batal</button></div>
+      </div>
+    </div>
+
+    <!-- SIMPAN -->
+    <div class="pane" id="pane-simpan" hidden>
+      <div class="two">
+        <label class="field"><span>Format</span>
+          <select id="fmt"><option value="jpg">JPG (kecil)</option><option value="png">PNG (tanpa kompresi)</option></select>
+        </label>
+        <label class="field"><span>Ukuran foto</span>
+          <select id="size"><option value="0">Asli</option><option value="2048">Sisi panjang 2048 px</option><option value="1080">Sisi panjang 1080 px</option></select>
+        </label>
+      </div>
+      <div class="out" id="outInfo">—</div>
+      <div class="actions"><button class="btn primary" id="saveBtn">Simpan foto</button></div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="atur" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Atur</button>
+    <button class="tab" role="tab" data-tab="filter" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="10" r="6"/><circle cx="15" cy="10" r="6"/><circle cx="12" cy="15" r="6"/></svg>Filter</button>
+    <button class="tab" role="tab" data-tab="potong" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Potong</button>
+    <button class="tab" role="tab" data-tab="teks" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/></svg>Teks</button>
+    <button class="tab" role="tab" data-tab="bingkai" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Bingkai</button>
+    <button class="tab" role="tab" data-tab="kolase" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="8" height="18" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>Kolase</button>
+    <button class="tab" role="tab" data-tab="ai" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/><path d="M5 15l.6 1.4L7 17l-1.4.6L5 19l-.6-1.4L3 17l1.4-.6z"/></svg>AI</button>
+    <button class="tab" role="tab" data-tab="simpan" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Simpan</button>
+  </nav>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const MAX_PREVIEW = 1280;
+  const MAX_HISTORY = 30;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const inViewer = !!(window.claude && window.claude.use);
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+
+  // =========================================================
+  // DATA
+  // =========================================================
+  const SLIDERS = [
+    { key: "brightness", label: "Kecerahan", min: -100, max: 100 },
+    { key: "contrast",   label: "Kontras",   min: -100, max: 100 },
+    { key: "saturation", label: "Saturasi",  min: -100, max: 100 },
+    { key: "warmth",     label: "Suhu warna", min: -100, max: 100 },
+    { key: "sharpness",  label: "Ketajaman", min: 0,    max: 100 },
+  ];
+  const zeroAdj = () => ({ brightness: 0, contrast: 0, saturation: 0, warmth: 0, sharpness: 0 });
+
+  // Kurva per kanal: [angkat bayangan, batas terang, gamma]. c = kontras, sat = saturasi.
+  const FILTERS = [
+    { id: "none", name: "Asli", cat: "*" },
+    { id: "jernih", name: "Jernih", cat: "Kualitas", c: 1.12, sat: 1.12 },
+    { id: "cerah", name: "Cerah", cat: "Kualitas", r: [10, 255, .85], g: [10, 255, .85], b: [10, 255, .85], sat: 1.05 },
+    { id: "vivid", name: "Warna Kuat", cat: "Kualitas", c: 1.08, sat: 1.35 },
+    { id: "vintage", name: "Vintage", cat: "Retro", r: [30, 245, .95], g: [20, 235, 1], b: [35, 210, 1.05], sat: .8, vig: .25, grain: 10 },
+    { id: "sepia", name: "Sepia", cat: "Retro", r: [15, 245, 1], g: [15, 245, 1], b: [15, 245, 1], bw: true, tint: [1.08, .94, .76], vig: .15 },
+    { id: "polaroid", name: "Polaroid", cat: "Retro", r: [15, 250, .9], g: [10, 245, .95], b: [30, 230, 1], sat: .9, c: .95 },
+    { id: "hangat", name: "Film Hangat", cat: "Film", r: [8, 255, .92], g: [4, 245, .98], b: [12, 225, 1.06], c: 1.06, grain: 8 },
+    { id: "dingin", name: "Film Dingin", cat: "Film", r: [6, 235, 1.04], g: [8, 248, 1], b: [16, 255, .9], sat: .9, grain: 8 },
+    { id: "bw", name: "Hitam Putih", cat: "Film", bw: true, c: 1.05 },
+    { id: "noir", name: "Noir", cat: "Film", bw: true, c: 1.4, vig: .35, grain: 12 },
+    { id: "langit", name: "Langit Biru", cat: "Pemandangan", r: [0, 255, 1.05], b: [0, 255, .9], sat: 1.15 },
+    { id: "hijau", name: "Hijau Segar", cat: "Pemandangan", r: [0, 255, 1.03], g: [0, 255, .9], sat: 1.15 },
+    { id: "senja", name: "Senja", cat: "Pemandangan", r: [10, 255, .88], b: [20, 225, 1.08], sat: 1.1, vig: .2 },
+  ];
+  const FILTER_BY_ID = Object.fromEntries(FILTERS.map((f) => [f.id, f]));
+  const FCATS = ["Semua", "Kualitas", "Retro", "Film", "Pemandangan"];
+
+  // Pustaka font Google. pre = sudah dimuat bersama halaman; sisanya diunduh saat dipilih.
+  const FALLBACK = { Sans: "system-ui, sans-serif", Serif: "Georgia, serif", Display: "Impact, sans-serif", Tangan: "cursive", Mono: "ui-monospace, monospace", Milikku: "sans-serif" };
+  const FONT_CATALOG = [
+    ["Figtree", "Sans", 700, 0, 1], ["Poppins", "Sans", 700], ["Montserrat", "Sans", 800], ["Nunito", "Sans", 800], ["Rubik", "Sans", 700],
+    ["Oswald", "Sans", 600], ["Raleway", "Sans", 800], ["Work Sans", "Sans", 700], ["Quicksand", "Sans", 700], ["Barlow Condensed", "Sans", 700],
+    ["Archivo Black", "Sans", 400], ["Kanit", "Sans", 700],
+    ["Playfair Display", "Serif", 700, 1, 1], ["Merriweather", "Serif", 700], ["Lora", "Serif", 700], ["DM Serif Display", "Serif", 400],
+    ["Abril Fatface", "Serif", 400], ["Cormorant Garamond", "Serif", 700], ["Libre Baskerville", "Serif", 700], ["Bodoni Moda", "Serif", 700],
+    ["Anton", "Display", 400, 0, 1], ["Bricolage Grotesque", "Display", 700, 0, 1], ["Bebas Neue", "Display", 400], ["Bungee", "Display", 400],
+    ["Righteous", "Display", 400], ["Lobster", "Display", 400], ["Alfa Slab One", "Display", 400], ["Monoton", "Display", 400],
+    ["Bowlby One", "Display", 400], ["Fredoka", "Display", 700], ["Luckiest Guy", "Display", 400], ["Rubik Mono One", "Display", 400],
+    ["Pacifico", "Tangan", 400, 0, 1], ["Permanent Marker", "Tangan", 400, 0, 1], ["Dancing Script", "Tangan", 700], ["Caveat", "Tangan", 700],
+    ["Satisfy", "Tangan", 400], ["Great Vibes", "Tangan", 400], ["Sacramento", "Tangan", 400], ["Kalam", "Tangan", 700],
+    ["Shadows Into Light", "Tangan", 400], ["Indie Flower", "Tangan", 400], ["Amatic SC", "Tangan", 700], ["Yellowtail", "Tangan", 400],
+    ["Space Mono", "Mono", 700], ["JetBrains Mono", "Mono", 700], ["Courier Prime", "Mono", 700], ["IBM Plex Mono", "Mono", 500],
+  ];
+  const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const FONTS = [];
+  const FONT_BY_ID = {};
+  function registerFont(name, cat, w, italic, pre, src) {
+    const id = src === "file" ? "file-" + slug(name) : slug(name);
+    if (FONT_BY_ID[id]) return FONT_BY_ID[id];
+    const f = { id, name, cat, w, st: italic ? "italic" : "normal", fam: `"${name}", ${FALLBACK[cat] || "sans-serif"}`, src: src || "google", state: pre ? "loaded" : "idle" };
+    FONTS.push(f); FONT_BY_ID[id] = f;
+    return f;
+  }
+  for (const [n, c, w, it, pre] of FONT_CATALOG) registerFont(n, c, w, it, pre);
+  const fontStr = (f, px) => `${f.st} ${f.w} ${px}px ${f.fam}`;
+
+  const TEMPLATES = [
+    { name: "JUDUL",  text: "JUDUL KEREN",    font: "anton",               color: "#FFFFFF", stroke: null,      strokeW: 0,  bg: null,      shadow: true },
+    { name: "Tangan", text: "Tulisan tangan", font: "pacifico",            color: "#FFFFFF", stroke: null,      strokeW: 0,  bg: null,      shadow: true },
+    { name: "Label",  text: "Label",          font: "figtree",             color: "#111111", stroke: null,      strokeW: 0,  bg: "#F2C14E", shadow: false },
+    { name: "Klasik", text: "Klasik",         font: "playfair-display",    color: "#FFFFFF", stroke: null,      strokeW: 0,  bg: null,      shadow: false },
+    { name: "Spidol", text: "Spidol!",        font: "permanent-marker",    color: "#F2C14E", stroke: "#111111", strokeW: 12, bg: null,      shadow: false },
+    { name: "Garis",  text: "Garis Tepi",     font: "bricolage-grotesque", color: "#FFFFFF", stroke: "#E8524A", strokeW: 18, bg: null,      shadow: false },
+  ];
+  const COLORS = ["#FFFFFF", "#111111", "#F2C14E", "#E8524A", "#FF8FB1", "#B36BFF", "#3D8BFD", "#2FB67C"];
+
+  const FRAMES = [
+    { id: "none", name: "Tanpa" },
+    { id: "polos", name: "Polos", color: "#FFFFFF", size: 5, radius: 0 },
+    { id: "polaroid", name: "Polaroid", color: "#FAF8F2", size: 5, radius: 0 },
+    { id: "bulat", name: "Bulat", color: "#F2C14E", size: 6, radius: 14 },
+    { id: "ganda", name: "Garis Ganda", color: "#FFFFFF", size: 7, radius: 0 },
+    { id: "film", name: "Film", color: "#151515", size: 5, radius: 0 },
+    { id: "bayangan", name: "Bayangan", color: "#EDEBE5", size: 7, radius: 4 },
+  ];
+  const FRAME_BY_ID = Object.fromEntries(FRAMES.map((f) => [f.id, f]));
+  const NOFRAME = { id: "none", color: "#FFFFFF", size: 0, radius: 0 };
+
+  const LAYOUTS = [
+    { id: "2v", cells: [[0, 0, .5, 1], [.5, 0, .5, 1]] },
+    { id: "2h", cells: [[0, 0, 1, .5], [0, .5, 1, .5]] },
+    { id: "3a", cells: [[0, 0, .5, 1], [.5, 0, .5, .5], [.5, .5, .5, .5]] },
+    { id: "3b", cells: [[0, 0, 1, .5], [0, .5, .5, .5], [.5, .5, .5, .5]] },
+    { id: "3c", cells: [[0, 0, 1 / 3, 1], [1 / 3, 0, 1 / 3, 1], [2 / 3, 0, 1 / 3, 1]] },
+    { id: "3d", cells: [[0, 0, 1, 1 / 3], [0, 1 / 3, 1, 1 / 3], [0, 2 / 3, 1, 1 / 3]] },
+    { id: "4g", cells: [[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, .5, .5], [.5, .5, .5, .5]] },
+    { id: "4a", cells: [[0, 0, 1, .6], [0, .6, 1 / 3, .4], [1 / 3, .6, 1 / 3, .4], [2 / 3, .6, 1 / 3, .4]] },
+    { id: "4b", cells: [[0, 0, .6, 1], [.6, 0, .4, 1 / 3], [.6, 1 / 3, .4, 1 / 3], [.6, 2 / 3, .4, 1 / 3]] },
+    { id: "5a", cells: [[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, 1 / 3, .5], [1 / 3, .5, 1 / 3, .5], [2 / 3, .5, 1 / 3, .5]] },
+    { id: "6g", cells: [0, 1, 2].flatMap((r) => [[0, r / 3, .5, 1 / 3], [.5, r / 3, .5, 1 / 3]]) },
+    { id: "9g", cells: [0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => [c / 3, r / 3, 1 / 3, 1 / 3])) },
+  ];
+  const LAYOUT_BY_ID = Object.fromEntries(LAYOUTS.map((l) => [l.id, l]));
+
+  // =========================================================
+  // INTI: olah piksel (pengaturan + filter)
+  // =========================================================
+  const lutCache = {};
+  function filterLUT(f) {
+    if (lutCache[f.id]) return lutCache[f.id];
+    const mk = (p) => {
+      const [l, g, y] = p || [0, 255, 1], c = f.c || 1, a = new Float32Array(256);
+      for (let v = 0; v < 256; v++) { const x = l + (g - l) * Math.pow(v / 255, y); a[v] = (x - 128) * c + 128; }
+      return a;
+    };
+    return (lutCache[f.id] = { r: mk(f.r), g: mk(f.g), b: mk(f.b) });
+  }
+  const hash = (i) => ((Math.imul(i, 2654435761) >>> 0) & 1023) / 1023;
+
+  function adjustPixels(src, dst, w, h, a, flt) {
+    const br = a.brightness * 1.2, c = a.contrast * 2.55;
+    const cf = (259 * (c + 255)) / (255 * (259 - c));
+    const wr = a.warmth * 0.45, sat = 1 + a.saturation / 100;
+    const lr = new Float32Array(256), lg = new Float32Array(256), lb = new Float32Array(256);
+    for (let v = 0; v < 256; v++) { const x = cf * (v + br - 128) + 128; lr[v] = x + wr; lg[v] = x; lb[v] = x - wr; }
+    const f = flt && flt.id !== "none" && flt.amt > 0 ? FILTER_BY_ID[flt.id] : null;
+    const L = f ? filterLUT(f) : null, amt = f ? flt.amt / 100 : 0;
+    const fsat = f && f.sat ? f.sat : 1, bw = f && f.bw, tint = (f && f.tint) || [1, 1, 1];
+    const vig = (f && f.vig) || 0, grain = (f && f.grain) || 0;
+    const cx = w / 2, cy = h / 2, maxd = Math.hypot(cx, cy);
+    const n = src.length;
+    let x = 0, y = 0;
+    for (let i = 0; i < n; i += 4) {
+      let r = lr[src[i]], g = lg[src[i + 1]], b = lb[src[i + 2]];
+      if (sat !== 1) { const l = 0.299 * r + 0.587 * g + 0.114 * b; r = l + (r - l) * sat; g = l + (g - l) * sat; b = l + (b - l) * sat; }
+      if (L) {
+        let fr = L.r[r < 0 ? 0 : r > 255 ? 255 : r | 0], fg = L.g[g < 0 ? 0 : g > 255 ? 255 : g | 0], fb = L.b[b < 0 ? 0 : b > 255 ? 255 : b | 0];
+        if (bw) { const l = 0.299 * fr + 0.587 * fg + 0.114 * fb; fr = l * tint[0]; fg = l * tint[1]; fb = l * tint[2]; }
+        else if (fsat !== 1) { const l = 0.299 * fr + 0.587 * fg + 0.114 * fb; fr = l + (fr - l) * fsat; fg = l + (fg - l) * fsat; fb = l + (fb - l) * fsat; }
+        if (vig) {
+          let t = (Math.hypot(x - cx, y - cy) / maxd - 0.35) / 0.6; t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const k = 1 - vig * t * t * (3 - 2 * t); fr *= k; fg *= k; fb *= k;
+        }
+        if (grain) { const z = (hash(i >> 2) - 0.5) * grain; fr += z; fg += z; fb += z; }
+        r += (fr - r) * amt; g += (fg - g) * amt; b += (fb - b) * amt;
+      }
+      dst[i] = r; dst[i + 1] = g; dst[i + 2] = b; dst[i + 3] = src[i + 3];
+      if (++x === w) { x = 0; y++; }
+    }
+    if (a.sharpness > 0 && w > 2 && h > 2) {
+      const k = (a.sharpness / 100) * 1.1, t = new Uint8ClampedArray(dst), row = w * 4;
+      for (let yy = 1; yy < h - 1; yy++) for (let xx = 1; xx < w - 1; xx++) {
+        const i = yy * row + xx * 4;
+        for (let ch = 0; ch < 3; ch++) { const p = i + ch; dst[p] = t[p] * (1 + 4 * k) - k * (t[p - 4] + t[p + 4] + t[p - row] + t[p + row]); }
+      }
+    }
+  }
+  window.__adjustPixels = adjustPixels;
+
+  function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    if (r > 0 && ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+  }
+  const lum = (hex) => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+
+  // =========================================================
+  // TEKS (lapisan). x,y = titik tengah relatif foto (0–1); size relatif sisi pendek foto.
+  // =========================================================
+  const mctx = document.createElement("canvas").getContext("2d");
+  const fontOf = (L) => FONT_BY_ID[L.font] || FONT_BY_ID.figtree;
+  function layerDims(L) {
+    mctx.font = fontStr(fontOf(L), 100);
+    const lines = String(L.text || " ").split("\n");
+    let mw = 0; for (const ln of lines) mw = Math.max(mw, mctx.measureText(ln || " ").width);
+    const pad = L.bg ? 0.35 : 0.06;
+    return [(mw / 100 + pad * 2) * L.size, (lines.length * 1.25 + pad * 2) * L.size];
+  }
+  function drawLayer(ctx, L, W, H) {
+    const unit = Math.min(W, H), [dw, dh] = layerDims(L), w = dw * unit, h = dh * unit;
+    const px = L.size * unit, lines = String(L.text || " ").split("\n");
+    ctx.save();
+    ctx.translate(L.x * W, L.y * H); ctx.rotate(L.rot); ctx.globalAlpha = L.opacity;
+    if (L.bg) { ctx.fillStyle = L.bg; rrect(ctx, -w / 2, -h / 2, w, h, px * 0.25); ctx.fill(); }
+    ctx.font = fontStr(fontOf(L), px); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineJoin = "round"; ctx.miterLimit = 2;
+    const lh = px * 1.25, top = -((lines.length - 1) * lh) / 2;
+    const shadowOn = () => { ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = px * 0.18; ctx.shadowOffsetY = px * 0.05; };
+    const shadowOff = () => { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
+    const sw = L.stroke && L.strokeW > 0 ? (L.strokeW / 100) * px : 0;
+    lines.forEach((ln, k) => {
+      const yy = top + k * lh;
+      if (sw) { if (L.shadow) shadowOn(); ctx.strokeStyle = L.stroke; ctx.lineWidth = sw; ctx.strokeText(ln, 0, yy); shadowOff(); }
+      else if (L.shadow) shadowOn();
+      ctx.fillStyle = L.color; ctx.fillText(ln, 0, yy); shadowOff();
+    });
+    ctx.restore();
+  }
+  function drawLayers(ctx, W, H) { for (const L of state.layers) drawLayer(ctx, L, W, H); }
+
+  // =========================================================
+  // BINGKAI: hitung ukuran dan gambar bingkai di sekitar foto
+  // =========================================================
+  function frameGeom(pw, ph, f) {
+    const t = Math.round((f.size / 100) * Math.min(pw, ph));
+    let p = [0, 0, 0, 0]; // atas, kanan, bawah, kiri
+    if (f.id === "polos" || f.id === "ganda" || f.id === "bulat") p = [t, t, t, t];
+    else if (f.id === "polaroid") p = [t, t, Math.round(t * 3.2), t];
+    else if (f.id === "film") p = [Math.round(t * 1.8), Math.round(t * .6), Math.round(t * 1.8), Math.round(t * .6)];
+    else if (f.id === "bayangan") p = Array(4).fill(Math.round(t * 1.4));
+    return { W: pw + p[1] + p[3], H: ph + p[0] + p[2], x: p[3], y: p[0], w: pw, h: ph, t };
+  }
+  function drawFramed(ctx, photo, g, f) {
+    ctx.clearRect(0, 0, g.W, g.H);
+    if (f.id === "none") { ctx.drawImage(photo, 0, 0, g.w, g.h); return; }
+    const rad = (f.radius / 100) * Math.min(g.w, g.h) * 0.5, t = g.t;
+    ctx.fillStyle = f.color; ctx.fillRect(0, 0, g.W, g.H);
+    if (f.id === "film") {
+      ctx.fillStyle = lum(f.color) > 0.5 ? "rgba(0,0,0,.22)" : "rgba(255,255,255,.82)";
+      const hw = t * 0.55, hh = t * 0.75, step = t * 1.3;
+      for (let xx = step / 2; xx < g.W - hw; xx += step) {
+        rrect(ctx, xx, (g.y - hh) / 2, hw, hh, hw * 0.25); ctx.fill();
+        rrect(ctx, xx, g.y + g.h + (g.H - g.y - g.h - hh) / 2, hw, hh, hw * 0.25); ctx.fill();
+      }
+    }
+    if (f.id === "bayangan") {
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,.38)"; ctx.shadowBlur = t * 0.9; ctx.shadowOffsetY = t * 0.3;
+      ctx.fillStyle = "#000"; rrect(ctx, g.x, g.y, g.w, g.h, rad); ctx.fill(); ctx.restore();
+    }
+    ctx.save(); rrect(ctx, g.x, g.y, g.w, g.h, rad); ctx.clip(); ctx.drawImage(photo, g.x, g.y, g.w, g.h); ctx.restore();
+    if (f.id === "ganda") {
+      const o = t * 0.45, lw = Math.max(1, t * 0.08);
+      ctx.strokeStyle = lum(f.color) > 0.5 ? "#1E1E1E" : "#F5F3EE"; ctx.lineWidth = lw;
+      rrect(ctx, g.x - o, g.y - o, g.w + o * 2, g.h + o * 2, rad ? rad + o : 0); ctx.stroke();
+    }
+  }
+
+  // =========================================================
+  // STATUS & RIWAYAT
+  // =========================================================
+  const state = { base: null, adj: zeroAdj(), filter: { id: "none", amt: 100 }, frame: { ...NOFRAME }, layers: [], isSample: true };
+  let past = [], future = [], selId = null, nextId = 1;
+  const view = $("#view"), vctx = view.getContext("2d");
+  const photoC = document.createElement("canvas"), pctx = photoC.getContext("2d", { willReadFrequently: true });
+  let previewSrc = null, previewOut = null, pixelsDirty = true, geom = null;
+
+  const snapshot = () => ({ base: state.base, adj: { ...state.adj }, filter: { ...state.filter }, frame: { ...state.frame }, layers: state.layers.map((l) => ({ ...l })), isSample: state.isSample });
+  function commit() {
+    past.push(snapshot());
+    if (past.length > MAX_HISTORY) past.shift();
+    future = []; updateHistoryBtns();
+  }
+  function restore(s) {
+    const baseChanged = s.base !== state.base;
+    state.base = s.base; state.adj = { ...s.adj }; state.filter = { ...s.filter }; state.frame = { ...s.frame };
+    state.layers = s.layers.map((l) => ({ ...l })); state.isSample = s.isSample;
+    if (!getSel()) selId = null;
+    if (baseChanged) buildPreview(); else { pixelsDirty = true; render(); }
+    syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI();
+  }
+  function undo() { if (aiS) return; if (past.length > 1) { future.push(past.pop()); restore(past[past.length - 1]); updateHistoryBtns(); } }
+  function redo() { if (aiS) return; if (future.length) { const s = future.pop(); past.push(s); restore(s); updateHistoryBtns(); } }
+  function updateHistoryBtns() { $("#undo").disabled = past.length <= 1 || !!aiS; $("#redo").disabled = future.length === 0 || !!aiS; }
+  const getSel = () => state.layers.find((l) => l.id === selId) || null;
+
+  // =========================================================
+  // PRATINJAU
+  // =========================================================
+  function buildPreview() {
+    const b = state.base;
+    const sc = Math.min(1, MAX_PREVIEW / Math.max(b.width, b.height));
+    const pw = Math.max(1, Math.round(b.width * sc)), ph = Math.max(1, Math.round(b.height * sc));
+    photoC.width = pw; photoC.height = ph;
+    pctx.imageSmoothingQuality = "high";
+    pctx.clearRect(0, 0, pw, ph); pctx.drawImage(b, 0, 0, pw, ph);
+    previewSrc = pctx.getImageData(0, 0, pw, ph);
+    previewOut = pctx.createImageData(pw, ph);
+    pixelsDirty = true;
+    $("#sampleChip").hidden = !state.isSample || currentTab === "kolase";
+    renderNow();
+    if (cropping) resetCropBox();
+    updateDims(); updateOutInfo(); buildFilterThumbs(); buildFrameThumbs();
+  }
+  let rafId = 0;
+  function render() { if (!rafId) rafId = requestAnimationFrame(() => { rafId = 0; renderNow(); }); }
+  function renderNow() {
+    if (!previewSrc) return;
+    const pw = photoC.width, ph = photoC.height;
+    if (comparing) pctx.putImageData(previewSrc, 0, 0);
+    else {
+      if (pixelsDirty) { adjustPixels(previewSrc.data, previewOut.data, pw, ph, state.adj, state.filter); pixelsDirty = false; }
+      pctx.putImageData(previewOut, 0, 0);
+      drawLayers(pctx, pw, ph);
+    }
+    const f = cropping ? NOFRAME : state.frame;
+    geom = frameGeom(pw, ph, f);
+    if (view.width !== geom.W || view.height !== geom.H) { view.width = geom.W; view.height = geom.H; fitView(); }
+    drawFramed(vctx, photoC, geom, f);
+    updateSelBox();
+  }
+  const renderPixels = () => { pixelsDirty = true; render(); };
+  function fitView() {
+    const st = $("#stage"), cs = getComputedStyle(st);
+    const aw = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ah = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (aw <= 0 || ah <= 0) return;
+    const s = Math.min(aw / view.width, ah / view.height), wrap = $("#wrap");
+    wrap.style.width = Math.floor(view.width * s) + "px";
+    wrap.style.height = Math.floor(view.height * s) + "px";
+    if (cropping) drawCropBox();
+    updateSelBox();
+    if (currentTab === "kolase") fitCollage();
+  }
+  new ResizeObserver(fitView).observe($("#stage"));
+  // kotak foto (tanpa bingkai) dalam piksel layar
+  function photoBox() {
+    const wrap = $("#wrap"), s = wrap.clientWidth / view.width, g = geom || { x: 0, y: 0, w: view.width, h: view.height };
+    return { x: g.x * s, y: g.y * s, w: g.w * s, h: g.h * s };
+  }
+  function updateDims() {
+    const b = state.base, g = frameGeom(b.width, b.height, state.frame);
+    $("#dims").textContent = `${g.W} × ${g.H} px`;
+  }
+
+  // =========================================================
+  // TAB ATUR
+  // =========================================================
+  const sliderEls = {};
+  for (const s of SLIDERS) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<label for="s-${s.key}">${s.label}</label>
+      <input type="range" id="s-${s.key}" min="${s.min}" max="${s.max}" step="1" value="0">
+      <button class="val" title="Ketuk untuk nol">0</button>`;
+    const input = row.querySelector("input"), val = row.querySelector(".val");
+    input.addEventListener("input", () => { state.adj[s.key] = +input.value; paintSlider(s.key); renderPixels(); });
+    input.addEventListener("change", commit);
+    val.addEventListener("click", () => { if (state.adj[s.key] !== 0) { state.adj[s.key] = 0; syncSliders(); renderPixels(); commit(); } });
+    sliderEls[s.key] = { input, val };
+    $("#sliders").appendChild(row);
+  }
+  function paintSlider(k) {
+    const v = state.adj[k], el = sliderEls[k];
+    el.input.value = v;
+    el.val.textContent = v > 0 && k !== "sharpness" ? "+" + v : String(v);
+    el.input.classList.toggle("changed", v !== 0); el.val.classList.toggle("changed", v !== 0);
+  }
+  function syncSliders() { for (const k in sliderEls) paintSlider(k); }
+  $("#resetAdj").addEventListener("click", () => {
+    if (Object.values(state.adj).every((v) => v === 0)) return;
+    state.adj = zeroAdj(); syncSliders(); renderPixels(); commit(); toast("Semua pengaturan dikembalikan");
+  });
+
+  let comparing = false;
+  const cmp = $("#compare");
+  cmp.addEventListener("pointerdown", (e) => { e.preventDefault(); comparing = true; cmp.classList.add("on"); render(); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => cmp.addEventListener(ev, () => {
+    if (!comparing) return; comparing = false; cmp.classList.remove("on"); render();
+  }));
+
+  // =========================================================
+  // TAB FILTER
+  // =========================================================
+  let fcat = "Semua";
+  const fbtns = {};
+  for (const c of FCATS) {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = c;
+    b.setAttribute("aria-pressed", c === fcat);
+    b.addEventListener("click", () => { fcat = c; $("#fcats").querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", x === b)); showFilterCat(); });
+    $("#fcats").appendChild(b);
+  }
+  for (const f of FILTERS) {
+    const b = document.createElement("button"); b.className = "fbtn"; b.dataset.id = f.id;
+    const c = document.createElement("canvas"); c.width = 68; c.height = 68;
+    b.append(c, document.createTextNode(f.name));
+    b.addEventListener("click", () => {
+      if (state.filter.id === f.id) return;
+      state.filter = { id: f.id, amt: 100 }; syncFilterUI(); renderPixels(); commit();
+    });
+    fbtns[f.id] = { b, c }; $("#filters").appendChild(b);
+  }
+  function showFilterCat() { for (const f of FILTERS) fbtns[f.id].b.hidden = !(fcat === "Semua" || f.cat === fcat || f.cat === "*"); }
+  function thumbSrc(s) {
+    const t = document.createElement("canvas"); t.width = s; t.height = s;
+    const x = t.getContext("2d", { willReadFrequently: true }), b = state.base, m = Math.min(b.width, b.height);
+    x.drawImage(b, (b.width - m) / 2, (b.height - m) / 2, m, m, 0, 0, s, s);
+    return t;
+  }
+  function buildFilterThumbs() {
+    const s = 68, t = thumbSrc(s), x = t.getContext("2d"), src = x.getImageData(0, 0, s, s);
+    for (const f of FILTERS) {
+      const out = x.createImageData(s, s);
+      adjustPixels(src.data, out.data, s, s, zeroAdj(), { id: f.id, amt: 100 });
+      fbtns[f.id].c.getContext("2d").putImageData(out, 0, 0);
+    }
+  }
+  const famt = $("#famt");
+  famt.addEventListener("input", () => { state.filter.amt = +famt.value; $("#famtVal").textContent = famt.value; renderPixels(); });
+  famt.addEventListener("change", commit);
+  function syncFilterUI() {
+    for (const id in fbtns) fbtns[id].b.setAttribute("aria-pressed", id === state.filter.id);
+    famt.value = state.filter.amt; $("#famtVal").textContent = state.filter.amt;
+    $("#famtRow").hidden = state.filter.id === "none";
+  }
+  showFilterCat();
+
+  // =========================================================
+  // PUSTAKA FONT: unduh saat dipilih
+  // =========================================================
+  const FONT_STORE = "rupa.fonts.v1";
+  const saved = store.get(FONT_STORE) || { loaded: [], extra: [] };
+  for (const e of saved.extra || []) registerFont(e.name, e.cat || "Sans", e.w || 400, false, false);
+  function rememberFonts() {
+    store.set(FONT_STORE, {
+      loaded: FONTS.filter((f) => f.state === "loaded" && f.src === "google").map((f) => f.id),
+      extra: FONTS.filter((f) => f.extra).map((f) => ({ name: f.name, cat: f.cat, w: f.w })),
+    });
+  }
+  function googleURL(f) {
+    let fam = encodeURIComponent(f.name).replace(/%20/g, "+");
+    if (f.st === "italic") fam += `:ital,wght@1,${f.w}`; else if (f.w !== 400) fam += `:wght@${f.w}`;
+    return `https://fonts.googleapis.com/css2?family=${fam}&display=swap`;
+  }
+  function fontReady(f) {
+    if (!document.fonts) return true;
+    for (const ff of document.fonts) if (ff.family.replace(/["']/g, "") === f.name && ff.status === "loaded") return true;
+    return false;
+  }
+  function loadFont(f) {
+    if (f.state === "loaded") return Promise.resolve(f);
+    if (f.promise) return f.promise;
+    f.state = "loading"; paintFontList();
+    f.promise = new Promise((resolve, reject) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet"; link.href = googleURL(f);
+      const fail = (why) => { clearTimeout(timer); link.remove(); f.state = "idle"; f.promise = null; paintFontList(); reject(new Error(why)); };
+      const timer = setTimeout(() => fail("timeout"), 15000);
+      link.onerror = () => fail("notfound");
+      link.onload = () => {
+        (document.fonts ? document.fonts.load(fontStr(f, 40)) : Promise.resolve()).then(() => {
+          clearTimeout(timer);
+          if (!fontReady(f)) { fail("notfound"); return; }
+          f.state = "loaded"; f.promise = null; rememberFonts(); paintFontList(); render(); updateSelBox(); resolve(f);
+        }, () => fail("load"));
+      };
+      document.head.appendChild(link);
+    });
+    return f.promise;
+  }
+  window.__fonts = FONTS;
+  // font bawaan ikut stylesheet halaman; pastikan siap untuk kanvas
+  if (document.fonts) Promise.all(FONTS.filter((f) => f.state === "loaded").map((f) => document.fonts.load(fontStr(f, 40)).catch(() => {}))).then(() => { render(); paintFontList(); });
+
+  let fontCat = "Terunduh";
+  const FONT_CATS = ["Terunduh", "Sans", "Serif", "Display", "Tangan", "Mono"];
+  for (const c of FONT_CATS) {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = c === "Tangan" ? "Tulisan tangan" : c; b.dataset.c = c;
+    b.addEventListener("click", () => { fontCat = c; paintFontList(); });
+    $("#fontCats").appendChild(b);
+  }
+  const DL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
+  function paintFontList() {
+    $("#fontCats").querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", b.dataset.c === fontCat));
+    const L = getSel(), cur = L ? L.font : null;
+    const list = FONTS.filter((f) => fontCat === "Terunduh" ? f.state === "loaded" : f.cat === fontCat);
+    const box = $("#fontList"); box.innerHTML = "";
+    for (const f of list) {
+      const b = document.createElement("button"); b.className = "fitem"; b.dataset.id = f.id;
+      b.setAttribute("aria-pressed", f.id === cur);
+      const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = f.name;
+      if (f.state === "loaded") { nm.style.fontFamily = f.fam; nm.style.fontWeight = f.w; nm.style.fontStyle = f.st; }
+      b.appendChild(nm);
+      if (f.state !== "loaded") {
+        const tg = document.createElement("span"); tg.className = "tag";
+        tg.innerHTML = f.state === "loading" ? "Mengunduh…" : DL_ICON + "Unduh";
+        b.appendChild(tg); if (f.state === "loading") b.classList.add("loading");
+      }
+      b.addEventListener("click", () => pickFont(f));
+      box.appendChild(b);
+    }
+    if (!list.length) { const p = document.createElement("p"); p.className = "hint"; p.textContent = "Belum ada font di sini."; box.appendChild(p); }
+    const n = FONTS.filter((f) => f.state === "loaded").length;
+    $("#fontCount").textContent = `${n} dari ${FONTS.length} terunduh`;
+    if (L) { const f = fontOf(L); const el = $("#fontCur"); el.textContent = f.name; el.style.fontFamily = f.state === "loaded" ? f.fam : ""; el.style.fontWeight = f.w; el.style.fontStyle = f.st; }
+  }
+  function applyFont(f) {
+    const L = getSel(); if (!L) return;
+    L.font = f.id; render(); paintFontList(); commit();
+  }
+  function pickFont(f) {
+    if (f.state === "loaded") { applyFont(f); return; }
+    loadFont(f).then(() => { applyFont(f); toast(`Font ${f.name} terunduh`); })
+      .catch(() => toast("Font gagal diunduh. Periksa internetmu lalu coba lagi."));
+  }
+  async function getFontByName() {
+    const raw = $("#fontSearch").value.trim().replace(/\s+/g, " ");
+    if (!raw) { toast("Ketik nama font dulu, misalnya Lato"); return; }
+    const name = raw.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    const exist = FONTS.find((f) => f.name.toLowerCase() === raw.toLowerCase() && f.src === "google");
+    if (exist) { pickFont(exist); $("#fontSearch").value = ""; return; }
+    // coba persis seperti ditulis, lalu dengan huruf besar di awal kata
+    for (const nm of [...new Set([raw, name])]) {
+      const f = registerFont(nm, "Sans", 400, false, false);
+      try {
+        await loadFont(f); f.extra = true; f.cat = "Sans"; rememberFonts();
+        $("#fontSearch").value = ""; fontCat = "Terunduh"; applyFont(f); toast(`Font ${nm} terunduh`); return;
+      } catch (e) { FONTS.splice(FONTS.indexOf(f), 1); delete FONT_BY_ID[f.id]; }
+    }
+    paintFontList();
+    toast(`"${raw}" tidak ditemukan di Google Fonts. Periksa ejaannya.`);
+  }
+  $("#fontGet").addEventListener("click", getFontByName);
+  $("#fontSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); getFontByName(); } });
+  $("#fontFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0]; e.target.value = "";
+    if (!file) return;
+    const base = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Font saya";
+    try {
+      const buf = await file.arrayBuffer();
+      const face = new FontFace(base, buf);
+      await face.load(); document.fonts.add(face);
+      const f = registerFont(base, "Milikku", 400, false, true, "file");
+      f.state = "loaded"; fontCat = "Terunduh"; applyFont(f); toast(`Font ${base} terpasang`);
+    } catch (err) { toast("File ini bukan font yang bisa dibaca. Pakai file .ttf, .otf, atau .woff."); }
+  });
+
+  // =========================================================
+  // TAB TEKS
+  // =========================================================
+  function addText(t) {
+    const n = state.layers.length % 5;
+    const L = { id: nextId++, type: "text", text: t.text, font: t.font, color: t.color, stroke: t.stroke, strokeW: t.strokeW, bg: t.bg, shadow: t.shadow, size: 0.1, x: 0.5 + n * 0.03, y: 0.5 + n * 0.03, rot: 0, opacity: 1 };
+    state.layers.push(L); selId = L.id; syncLayerUI(); render(); commit();
+  }
+  for (const t of TEMPLATES) {
+    const b = document.createElement("button"); b.className = "tpl"; b.textContent = t.name;
+    const f = FONT_BY_ID[t.font];
+    b.style.fontFamily = f.fam; b.style.fontWeight = f.w; b.style.fontStyle = f.st;
+    b.style.color = t.color; if (t.bg) b.style.background = t.bg;
+    if (t.stroke) b.style.webkitTextStroke = `1px ${t.stroke}`;
+    b.addEventListener("click", () => {
+      const L = getSel();
+      if (L) { Object.assign(L, { font: t.font, color: t.color, stroke: t.stroke, strokeW: t.strokeW, bg: t.bg, shadow: t.shadow }); syncLayerUI(); render(); commit(); }
+      else addText(t);
+    });
+    $("#tpls").appendChild(b);
+  }
+  function makeSwatches(box, allowNone, onPick) {
+    const items = [];
+    if (allowNone) { const b = document.createElement("button"); b.className = "sw-btn sw-none"; b.setAttribute("aria-label", "Tanpa warna"); b.dataset.v = ""; items.push(b); }
+    for (const c of COLORS) { const b = document.createElement("button"); b.className = "sw-btn"; b.style.background = c; b.dataset.v = c; b.setAttribute("aria-label", "Warna " + c); items.push(b); }
+    for (const b of items) { b.addEventListener("click", () => onPick(b.dataset.v || null, true)); box.appendChild(b); }
+    const pick = document.createElement("label"); pick.className = "sw-btn sw-pick"; pick.title = "Warna lain";
+    const inp = document.createElement("input"); inp.type = "color"; inp.setAttribute("aria-label", "Pilih warna lain");
+    inp.addEventListener("input", () => onPick(inp.value.toUpperCase(), false));
+    inp.addEventListener("change", () => onPick(inp.value.toUpperCase(), true));
+    pick.appendChild(inp); box.appendChild(pick);
+    return (v) => { for (const b of items) b.setAttribute("aria-pressed", (b.dataset.v || null) === (v || null)); };
+  }
+  let colorTarget = "color";
+  const paintTextSw = makeSwatches($("#textSw"), true, (v, done) => {
+    const L = getSel(); if (!L) return;
+    if (colorTarget === "color") { if (!v) return; L.color = v; }
+    else if (colorTarget === "stroke") { L.stroke = v; if (v && !L.strokeW) L.strokeW = 12; }
+    else L.bg = v;
+    syncLayerUI(); render(); if (done) commit();
+  });
+  $("#colorTarget").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    colorTarget = b.dataset.t; syncLayerUI();
+  });
+  $("#txt").addEventListener("input", (e) => { const L = getSel(); if (L) { L.text = e.target.value; render(); } });
+  $("#txt").addEventListener("change", commit);
+  $("#strokeW").addEventListener("input", (e) => {
+    const L = getSel(); if (!L) return;
+    L.strokeW = +e.target.value; if (L.strokeW && !L.stroke) L.stroke = "#111111";
+    $("#strokeWVal").textContent = e.target.value; render();
+  });
+  $("#strokeW").addEventListener("change", () => { syncLayerUI(); commit(); });
+  $("#textOp").addEventListener("input", (e) => { const L = getSel(); if (L) { L.opacity = e.target.value / 100; $("#textOpVal").textContent = e.target.value; render(); } });
+  $("#textOp").addEventListener("change", commit);
+  $("#shadow").addEventListener("change", (e) => { const L = getSel(); if (L) { L.shadow = e.target.checked; render(); commit(); } });
+
+  let lastFontSel = null;
+  function syncLayerUI() {
+    const L = getSel();
+    $("#textEdit").hidden = !L;
+    $("#textHint").hidden = !!L;
+    $("#selTools").hidden = !L;
+    if (L) {
+      if (document.activeElement !== $("#txt")) $("#txt").value = L.text;
+      if (lastFontSel !== L.id) { lastFontSel = L.id; fontCat = "Terunduh"; }
+      paintFontList();
+      $("#colorTarget").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === colorTarget));
+      paintTextSw(colorTarget === "color" ? L.color : colorTarget === "stroke" ? L.stroke : L.bg);
+      $("#strokeRow").hidden = colorTarget !== "stroke";
+      $("#strokeW").value = L.strokeW; $("#strokeWVal").textContent = L.strokeW;
+      $("#textOp").value = Math.round(L.opacity * 100); $("#textOpVal").textContent = Math.round(L.opacity * 100);
+      $("#shadow").checked = !!L.shadow;
+    } else lastFontSel = null;
+    updateSelBox();
+  }
+
+  const selEl = $("#sel");
+  function updateSelBox() {
+    const L = getSel();
+    if (!L || cropping || comparing || currentTab === "kolase") { selEl.hidden = true; return; }
+    const pb = photoBox(), unit = Math.min(pb.w, pb.h);
+    const [dw, dh] = layerDims(L), w = dw * unit + 12, h = dh * unit + 12;
+    selEl.hidden = false;
+    selEl.style.width = w + "px"; selEl.style.height = h + "px";
+    selEl.style.transform = `translate(${pb.x + L.x * pb.w - w / 2}px, ${pb.y + L.y * pb.h - h / 2}px) rotate(${L.rot}rad)`;
+  }
+
+  function hitTest(px, py) {
+    const pb = photoBox(), unit = Math.min(pb.w, pb.h), hits = [];
+    for (let k = state.layers.length - 1; k >= 0; k--) {
+      const L = state.layers[k], [dw, dh] = layerDims(L);
+      const dx = px - (pb.x + L.x * pb.w), dy = py - (pb.y + L.y * pb.h), c = Math.cos(-L.rot), s = Math.sin(-L.rot);
+      const lx = dx * c - dy * s, ly = dx * s + dy * c;
+      if (Math.abs(lx) <= Math.max(dw * unit / 2, 18) && Math.abs(ly) <= Math.max(dh * unit / 2, 18)) hits.push(L);
+    }
+    return hits;
+  }
+  let ldrag = null, lastTap = null;
+  $("#wrap").addEventListener("pointerdown", (e) => {
+    if (aiS && aiS.brush !== "off") { brushDown(e); return; }
+    if (cropping || e.target.closest("#selHandle")) return;
+    const r = $("#wrap").getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const hits = hitTest(px, py);
+    if (!hits.length) { if (selId) { selId = null; syncLayerUI(); } lastTap = null; return; }
+    let L = hits[0];
+    const cur = hits.findIndex((h) => h.id === selId);
+    const again = lastTap && Date.now() - lastTap.t < 450 && Math.hypot(lastTap.x - px, lastTap.y - py) < 10;
+    if (cur >= 0) L = again && hits.length > 1 ? hits[(cur + 1) % hits.length] : hits[cur];
+    lastTap = { t: Date.now(), x: px, y: py };
+    if (selId !== L.id) { selId = L.id; if (currentTab !== "teks") switchTab("teks"); else syncLayerUI(); }
+    e.preventDefault();
+    const pb = photoBox();
+    ldrag = { mode: "move", sx: e.clientX, sy: e.clientY, W: pb.w, H: pb.h, x0: L.x, y0: L.y, moved: false };
+  });
+  $("#selHandle").addEventListener("pointerdown", (e) => {
+    const L = getSel(); if (!L) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = $("#wrap").getBoundingClientRect(), pb = photoBox();
+    const cx = r.left + pb.x + L.x * pb.w, cy = r.top + pb.y + L.y * pb.h;
+    ldrag = { mode: "xform", cx, cy, d0: Math.hypot(e.clientX - cx, e.clientY - cy) || 1, a0: Math.atan2(e.clientY - cy, e.clientX - cx), size0: L.size, rot0: L.rot, moved: false };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!ldrag) return;
+    const L = getSel(); if (!L) return;
+    if (ldrag.mode === "move") {
+      if (!ldrag.moved && Math.hypot(e.clientX - ldrag.sx, e.clientY - ldrag.sy) < 3) return;
+      ldrag.moved = true;
+      L.x = clamp(ldrag.x0 + (e.clientX - ldrag.sx) / ldrag.W, -0.2, 1.2);
+      L.y = clamp(ldrag.y0 + (e.clientY - ldrag.sy) / ldrag.H, -0.2, 1.2);
+    } else {
+      const d = Math.hypot(e.clientX - ldrag.cx, e.clientY - ldrag.cy), a = Math.atan2(e.clientY - ldrag.cy, e.clientX - ldrag.cx);
+      L.size = clamp(ldrag.size0 * d / ldrag.d0, 0.02, 3);
+      let rot = ldrag.rot0 + a - ldrag.a0;
+      const q = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
+      if (Math.abs(rot - q) < 0.06) rot = q;
+      L.rot = rot; ldrag.moved = true;
+    }
+    render();
+  });
+  const endLDrag = () => { if (ldrag && ldrag.moved) commit(); ldrag = null; };
+  window.addEventListener("pointerup", endLDrag);
+  window.addEventListener("pointercancel", endLDrag);
+
+  $("#layDel").addEventListener("click", () => { state.layers = state.layers.filter((l) => l.id !== selId); selId = null; syncLayerUI(); render(); commit(); });
+  $("#layDup").addEventListener("click", () => {
+    const L = getSel(); if (!L) return;
+    const c = { ...L, id: nextId++, x: L.x + 0.04, y: L.y + 0.04 };
+    state.layers.push(c); selId = c.id; syncLayerUI(); render(); commit();
+  });
+  function moveLayer(dir) {
+    const i = state.layers.findIndex((l) => l.id === selId), j = i + dir;
+    if (i < 0 || j < 0 || j >= state.layers.length) { toast(dir > 0 ? "Sudah paling depan" : "Sudah paling belakang"); return; }
+    [state.layers[i], state.layers[j]] = [state.layers[j], state.layers[i]];
+    render(); commit();
+  }
+  $("#layUp").addEventListener("click", () => moveLayer(1));
+  $("#layDown").addEventListener("click", () => moveLayer(-1));
+  $("#layDone").addEventListener("click", () => { selId = null; syncLayerUI(); });
+
+  // =========================================================
+  // TAB BINGKAI
+  // =========================================================
+  const frBtns = {};
+  for (const f of FRAMES) {
+    const b = document.createElement("button"); b.className = "fbtn"; b.dataset.id = f.id;
+    const c = document.createElement("canvas"); c.width = 136; c.height = 136;
+    b.append(c, document.createTextNode(f.name));
+    b.addEventListener("click", () => {
+      if (state.frame.id === f.id) return;
+      state.frame = f.id === "none" ? { ...NOFRAME } : { id: f.id, color: f.color, size: f.size, radius: f.radius };
+      syncFrameUI(); render(); updateDims(); updateOutInfo(); commit();
+    });
+    frBtns[f.id] = { b, c }; $("#frames").appendChild(b);
+  }
+  function buildFrameThumbs() {
+    for (const f of FRAMES) {
+      const c = frBtns[f.id].c, x = c.getContext("2d");
+      const fr = f.id === "none" ? NOFRAME : { id: f.id, color: f.color, size: f.size * 1.6, radius: f.radius };
+      const g0 = frameGeom(100, 100, fr), s = Math.min(136 / g0.W, 136 / g0.H);
+      const pw = Math.round(100 * s), ph = Math.round(100 * s), g = frameGeom(pw, ph, fr);
+      const src = thumbSrc(Math.max(pw, ph));
+      x.fillStyle = "#1C1C20"; x.fillRect(0, 0, 136, 136);
+      x.save(); x.translate((136 - g.W) / 2, (136 - g.H) / 2); drawFramed(x, src, g, fr); x.restore();
+    }
+  }
+  const paintFrameSw = makeSwatches($("#frameSw"), false, (v, done) => {
+    if (!v || state.frame.id === "none") return;
+    state.frame.color = v; paintFrameSw(v); render(); if (done) commit();
+  });
+  $("#frSize").addEventListener("input", (e) => { state.frame.size = +e.target.value; $("#frSizeVal").textContent = e.target.value; render(); updateDims(); updateOutInfo(); });
+  $("#frSize").addEventListener("change", commit);
+  $("#frRad").addEventListener("input", (e) => { state.frame.radius = +e.target.value; $("#frRadVal").textContent = e.target.value; render(); });
+  $("#frRad").addEventListener("change", commit);
+  function syncFrameUI() {
+    for (const id in frBtns) frBtns[id].b.setAttribute("aria-pressed", id === state.frame.id);
+    $("#frameEdit").hidden = state.frame.id === "none";
+    paintFrameSw(state.frame.color);
+    $("#frSize").value = state.frame.size; $("#frSizeVal").textContent = state.frame.size;
+    $("#frRad").value = state.frame.radius; $("#frRadVal").textContent = state.frame.radius;
+  }
+
+  // =========================================================
+  // GEOMETRI: putar & balik (teks ikut berpindah)
+  // =========================================================
+  function transform(kind) {
+    const b = state.base, c = document.createElement("canvas");
+    const rot = kind === "L" || kind === "R";
+    c.width = rot ? b.height : b.width; c.height = rot ? b.width : b.height;
+    const x = c.getContext("2d");
+    if (kind === "R") { x.translate(c.width, 0); x.rotate(Math.PI / 2); }
+    if (kind === "L") { x.translate(0, c.height); x.rotate(-Math.PI / 2); }
+    if (kind === "H") { x.translate(c.width, 0); x.scale(-1, 1); }
+    if (kind === "V") { x.translate(0, c.height); x.scale(1, -1); }
+    x.drawImage(b, 0, 0);
+    for (const L of state.layers) {
+      const ox = L.x, oy = L.y;
+      if (kind === "R") { L.x = 1 - oy; L.y = ox; L.rot += Math.PI / 2; }
+      if (kind === "L") { L.x = oy; L.y = 1 - ox; L.rot -= Math.PI / 2; }
+      if (kind === "H") { L.x = 1 - ox; L.rot = -L.rot; }
+      if (kind === "V") { L.y = 1 - oy; L.rot = -L.rot; }
+    }
+    state.base = c; buildPreview(); commit();
+  }
+  $("#rotL").addEventListener("click", () => transform("L"));
+  $("#rotR").addEventListener("click", () => transform("R"));
+  $("#flipH").addEventListener("click", () => transform("H"));
+  $("#flipV").addEventListener("click", () => transform("V"));
+
+  // =========================================================
+  // POTONG
+  // =========================================================
+  let cropping = false, ratio = null, cropMode = "free";
+  const crop = { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+  const cropEl = $("#crop");
+  const MIN = 0.12;
+  const customSize = () => [clamp(Math.round(+$("#cw").value || 0), 16, 8000), clamp(Math.round(+$("#ch").value || 0), 16, 8000)];
+  function resetCropBox() {
+    const imgR = photoC.width / photoC.height;
+    if (cropMode === "orig") ratio = state.base.width / state.base.height;
+    if (!ratio) { crop.w = 0.9; crop.h = 0.9; }
+    else { crop.w = 0.9; crop.h = crop.w * imgR / ratio; if (crop.h > 0.9) { crop.h = 0.9; crop.w = crop.h * ratio / imgR; } }
+    if (cropMode === "orig") { crop.w = 1; crop.h = 1; }
+    crop.x = (1 - crop.w) / 2; crop.y = (1 - crop.h) / 2;
+    drawCropBox();
+  }
+  function drawCropBox() {
+    cropEl.style.left = crop.x * 100 + "%"; cropEl.style.top = crop.y * 100 + "%";
+    cropEl.style.width = crop.w * 100 + "%"; cropEl.style.height = crop.h * 100 + "%";
+    const b = state.base;
+    let t = `${Math.round(crop.w * b.width)} × ${Math.round(crop.h * b.height)} px`;
+    if (cropMode === "custom") { const [w, h] = customSize(); t += `\n→ ${w} × ${h} px`; }
+    $("#cropSize").textContent = t;
+  }
+  function setCropMode(on) {
+    if (cropping === on) return;
+    cropping = on; cropEl.hidden = !on;
+    renderNow();
+    if (on) resetCropBox();
+    updateSelBox();
+  }
+  let drag = null;
+  function startDrag(e, mode) {
+    e.preventDefault(); e.stopPropagation();
+    const r = $("#wrap").getBoundingClientRect();
+    drag = { mode, sx: e.clientX, sy: e.clientY, W: r.width, H: r.height, c: { ...crop } };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  cropEl.addEventListener("pointerdown", (e) => startDrag(e, "move"));
+  cropEl.querySelectorAll(".handle").forEach((h) => h.addEventListener("pointerdown", (e) => startDrag(e, h.dataset.h)));
+  function resizeBox(c0, corner, dx, dy, r, imgR) {
+    const sx = corner.includes("e") ? 1 : -1, sy = corner.includes("s") ? 1 : -1;
+    const fx = sx > 0 ? c0.x : c0.x + c0.w, fy = sy > 0 ? c0.y : c0.y + c0.h;
+    const maxW = sx > 0 ? 1 - fx : fx, maxH = sy > 0 ? 1 - fy : fy;
+    let w = clamp(c0.w + sx * dx, MIN, maxW), h;
+    if (r) { h = w * imgR / r; if (h > maxH) { h = maxH; w = h * r / imgR; } }
+    else h = clamp(c0.h + sy * dy, MIN, maxH);
+    return { x: sx > 0 ? fx : fx - w, y: sy > 0 ? fy : fy - h, w, h };
+  }
+  window.__resizeBox = resizeBox;
+  window.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = (e.clientX - drag.sx) / drag.W, dy = (e.clientY - drag.sy) / drag.H, c0 = drag.c;
+    if (drag.mode === "move") { crop.x = clamp(c0.x + dx, 0, 1 - c0.w); crop.y = clamp(c0.y + dy, 0, 1 - c0.h); }
+    else Object.assign(crop, resizeBox(c0, drag.mode, dx, dy, ratio, photoC.width / photoC.height));
+    drawCropBox();
+  });
+  window.addEventListener("pointerup", () => { drag = null; });
+  window.addEventListener("pointercancel", () => { drag = null; });
+  $("#ratios").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    document.querySelectorAll("#ratios .chip").forEach((c) => c.setAttribute("aria-pressed", c === b));
+    cropMode = b.dataset.r;
+    $("#customRow").hidden = cropMode !== "custom";
+    if (cropMode === "free") ratio = null;
+    else if (cropMode === "custom") { const [w, h] = customSize(); ratio = w / h; }
+    else if (cropMode !== "orig") ratio = +cropMode;
+    resetCropBox();
+  });
+  ["cw", "ch"].forEach((id) => $("#" + id).addEventListener("input", () => {
+    if (cropMode !== "custom") return;
+    const [w, h] = customSize(); ratio = w / h; resetCropBox();
+  }));
+  $("#resetCrop").addEventListener("click", resetCropBox);
+  $("#applyCrop").addEventListener("click", () => {
+    const b = state.base;
+    const sx = Math.round(crop.x * b.width), sy = Math.round(crop.y * b.height);
+    const sw = Math.max(1, Math.round(crop.w * b.width)), sh = Math.max(1, Math.round(crop.h * b.height));
+    const [ow, oh] = cropMode === "custom" ? customSize() : [sw, sh];
+    const c = document.createElement("canvas"); c.width = ow; c.height = oh;
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high";
+    x.drawImage(b, sx, sy, sw, sh, 0, 0, ow, oh);
+    const k = Math.min(b.width, b.height) / Math.min(sw, sh);
+    for (const L of state.layers) { L.x = (L.x * b.width - sx) / sw; L.y = (L.y * b.height - sy) / sh; L.size *= k; }
+    state.base = c; buildPreview(); commit();
+    toast(`Dipotong jadi ${ow} × ${oh} px`);
+  });
+
+  // =========================================================
+  // TAB KOLASE
+  // =========================================================
+  const col = { layout: "3a", ratio: 1, gap: 2, radius: 0, bg: "#FFFFFF", cells: [], sel: -1 };
+  const colView = $("#colView"), colCtx = colView.getContext("2d");
+  function cellRects(W, H) {
+    const g = (col.gap / 100) * Math.min(W, H), e = 1e-4;
+    return LAYOUT_BY_ID[col.layout].cells.map(([x, y, w, h]) => {
+      const l = x * W + (x < e ? g : g / 2), t = y * H + (y < e ? g : g / 2);
+      const r = (x + w) * W - (x + w > 1 - e ? g : g / 2), b = (y + h) * H - (y + h > 1 - e ? g : g / 2);
+      return { x: l, y: t, w: Math.max(1, r - l), h: Math.max(1, b - t) };
+    });
+  }
+  function coverRect(cell, rc) {
+    const img = cell.img, s = Math.max(rc.w / img.width, rc.h / img.height) * cell.zoom;
+    const sw = img.width * s, sh = img.height * s;
+    const mx = Math.max(0, (sw - rc.w) / 2), my = Math.max(0, (sh - rc.h) / 2);
+    return { x: rc.x + (rc.w - sw) / 2 + cell.ox * mx, y: rc.y + (rc.h - sh) / 2 + cell.oy * my, w: sw, h: sh, mx, my };
+  }
+  function renderCollage(ctx, W, H, preview) {
+    ctx.fillStyle = col.bg; ctx.fillRect(0, 0, W, H);
+    const rects = cellRects(W, H), unit = Math.min(W, H);
+    rects.forEach((rc, i) => {
+      const rad = (col.radius / 100) * Math.min(rc.w, rc.h) * 0.5, cell = col.cells[i];
+      ctx.save(); rrect(ctx, rc.x, rc.y, rc.w, rc.h, rad); ctx.clip();
+      if (cell && cell.img) { const d = coverRect(cell, rc); ctx.drawImage(cell.img, d.x, d.y, d.w, d.h); }
+      else if (preview) {
+        ctx.fillStyle = lum(col.bg) > 0.5 ? "#D9D6CE" : "#2E2E34"; ctx.fillRect(rc.x, rc.y, rc.w, rc.h);
+        ctx.fillStyle = lum(col.bg) > 0.5 ? "#77746C" : "#9C9A92";
+        ctx.font = `600 ${Math.max(12, unit * 0.06)}px Figtree, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("+", rc.x + rc.w / 2, rc.y + rc.h / 2 - unit * 0.02);
+        ctx.font = `500 ${Math.max(10, unit * 0.028)}px Figtree, sans-serif`;
+        ctx.fillText("Pilih foto", rc.x + rc.w / 2, rc.y + rc.h / 2 + unit * 0.035);
+      }
+      ctx.restore();
+      if (preview && i === col.sel) { ctx.strokeStyle = "#F2C14E"; ctx.lineWidth = Math.max(3, unit * 0.008); rrect(ctx, rc.x, rc.y, rc.w, rc.h, rad); ctx.stroke(); }
+    });
+  }
+  window.__col = col;
+  function fitCollage() {
+    const st = $("#stage"), cs = getComputedStyle(st);
+    const aw = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ah = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (aw <= 0 || ah <= 0) return;
+    const s = Math.min(aw / col.ratio, ah), dw = Math.floor(s * col.ratio), dh = Math.floor(s);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    colView.style.width = dw + "px"; colView.style.height = dh + "px";
+    colView.width = Math.round(dw * dpr); colView.height = Math.round(dh * dpr);
+    drawCollage();
+  }
+  function drawCollage() { renderCollage(colCtx, colView.width, colView.height, true); syncCellUI(); }
+  // tata letak sebagai ikon kecil
+  for (const L of LAYOUTS) {
+    const b = document.createElement("button"); b.className = "lbtn"; b.dataset.id = L.id; b.setAttribute("aria-label", `Tata letak ${L.cells.length} foto`);
+    const c = document.createElement("canvas"); c.width = 72; c.height = 72;
+    const x = c.getContext("2d");
+    for (const [cx, cy, cw, chh] of L.cells) { x.fillStyle = "#EDEBE5"; x.fillRect(cx * 72 + 3, cy * 72 + 3, cw * 72 - 6, chh * 72 - 6); }
+    b.appendChild(c);
+    b.addEventListener("click", () => { col.layout = L.id; col.sel = -1; paintLayouts(); drawCollage(); });
+    $("#layouts").appendChild(b);
+  }
+  const paintLayouts = () => $("#layouts").querySelectorAll(".lbtn").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === col.layout));
+  $("#colRatios").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    $("#colRatios").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", c === b));
+    col.ratio = +b.dataset.r; fitCollage();
+  });
+  $("#colGap").addEventListener("input", (e) => { col.gap = +e.target.value; $("#colGapVal").textContent = e.target.value; drawCollage(); });
+  $("#colRad").addEventListener("input", (e) => { col.radius = +e.target.value; $("#colRadVal").textContent = e.target.value; drawCollage(); });
+  const paintColSw = makeSwatches($("#colSw"), false, (v) => { if (!v) return; col.bg = v; paintColSw(v); drawCollage(); });
+  paintColSw(col.bg);
+  const newCell = (img) => ({ img, ox: 0, oy: 0, zoom: 1 });
+  function loadIntoCells(files, startAt) {
+    const n = LAYOUT_BY_ID[col.layout].cells.length;
+    const busy = (k) => col.cells[k] && (col.cells[k].img || col.cells[k].loading);
+    const list = [...files].filter((f) => !f.type || f.type.startsWith("image/"));
+    let slot = startAt == null ? 0 : startAt, skipped = 0;
+    for (const f of list) {
+      if (startAt == null) while (slot < n && busy(slot)) slot++;
+      if (slot >= n) { skipped++; continue; }
+      const target = slot++;
+      col.cells[target] = { loading: true };
+      decodeImage(f, 2400, (c) => { col.cells[target] = newCell(c); drawCollage(); },
+        () => { col.cells[target] = null; drawCollage(); toast("Ada foto yang tidak bisa dibuka. Coba JPG atau PNG."); });
+    }
+    if (skipped) toast(`${skipped} foto tidak muat. Pilih tata letak dengan lebih banyak kotak.`);
+    drawCollage();
+  }
+  $("#colFiles").addEventListener("change", (e) => { loadIntoCells(e.target.files, null); e.target.value = ""; });
+  let pendingCell = -1;
+  $("#colOne").addEventListener("change", (e) => { if (e.target.files[0] && pendingCell >= 0) loadIntoCells([e.target.files[0]], pendingCell); e.target.value = ""; });
+  $("#cellFile").addEventListener("change", (e) => { if (e.target.files[0] && col.sel >= 0) loadIntoCells([e.target.files[0]], col.sel); e.target.value = ""; });
+  $("#cellClear").addEventListener("click", () => { if (col.sel >= 0) { col.cells[col.sel] = null; drawCollage(); } });
+  $("#cellZoom").addEventListener("input", (e) => {
+    const c = col.cells[col.sel]; if (!c || !c.img) return;
+    c.zoom = +e.target.value / 100; $("#cellZoomVal").textContent = e.target.value; drawCollage();
+  });
+  function syncCellUI() {
+    const c = col.cells[col.sel];
+    $("#cellEdit").hidden = !(c && c.img);
+    if (c && c.img) { $("#cellZoom").value = Math.round(c.zoom * 100); $("#cellZoomVal").textContent = Math.round(c.zoom * 100); }
+    const filled = LAYOUT_BY_ID[col.layout].cells.some((_, i) => col.cells[i] && col.cells[i].img);
+    $("#colUse").disabled = !filled;
+  }
+  let cdrag = null;
+  colView.addEventListener("pointerdown", (e) => {
+    const r = colView.getBoundingClientRect(), k = colView.width / r.width;
+    const px = (e.clientX - r.left) * k, py = (e.clientY - r.top) * k;
+    const rects = cellRects(colView.width, colView.height);
+    const i = rects.findIndex((rc) => px >= rc.x && px <= rc.x + rc.w && py >= rc.y && py <= rc.y + rc.h);
+    if (i < 0) { col.sel = -1; drawCollage(); return; }
+    const cell = col.cells[i];
+    if (!cell || !cell.img) {
+      if (cell && cell.loading) return;
+      col.sel = -1; pendingCell = i; drawCollage(); $("#colOne").click(); return;
+    }
+    e.preventDefault();
+    col.sel = i; drawCollage();
+    const d = coverRect(cell, rects[i]);
+    cdrag = { i, sx: e.clientX, sy: e.clientY, ox: cell.ox, oy: cell.oy, mx: d.mx / k, my: d.my / k };
+    colView.setPointerCapture?.(e.pointerId);
+  });
+  colView.addEventListener("pointermove", (e) => {
+    if (!cdrag) return;
+    const cell = col.cells[cdrag.i]; if (!cell || !cell.img) return;
+    if (cdrag.mx > 0) cell.ox = clamp(cdrag.ox + (e.clientX - cdrag.sx) / cdrag.mx, -1, 1);
+    if (cdrag.my > 0) cell.oy = clamp(cdrag.oy + (e.clientY - cdrag.sy) / cdrag.my, -1, 1);
+    drawCollage();
+  });
+  ["pointerup", "pointercancel"].forEach((ev) => colView.addEventListener(ev, () => { cdrag = null; }));
+  $("#colUse").addEventListener("click", () => {
+    if (aiS) endAI();
+    const long = 2400, W = col.ratio >= 1 ? long : Math.round(long * col.ratio), H = col.ratio >= 1 ? Math.round(long / col.ratio) : long;
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high";
+    renderCollage(x, W, H, false);
+    state.base = c; state.adj = zeroAdj(); state.filter = { id: "none", amt: 100 }; state.layers = []; state.isSample = false;
+    selId = null; fileName = "kolase";
+    switchTab("atur");
+    buildPreview(); syncSliders(); syncFilterUI(); syncLayerUI(); commit();
+    toast("Kolase jadi. Sekarang bisa diedit seperti foto biasa.");
+  });
+
+
+  // =========================================================
+  // TAB AI: HAPUS LATAR BELAKANG (berjalan di HP lewat ONNX Runtime Web)
+  // Model: U²-Net kecil (u2netp, Apache-2.0) dan Silueta (U²-Net ringkas).
+  // =========================================================
+  const ORT_VER = "1.17.3", ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
+  const MODELS = {
+    cepat: { parts: ["u2netp.onnx"], size: 4574861 },
+    detail: { parts: ["silueta-1.bin", "silueta-2.bin", "silueta-3.bin", "silueta-4.bin", "silueta-5.bin"], size: 44173029 },
+  };
+  const MODEL_CACHE = "rupa-model-v1", IN = 320, MASK_MAX = 1600;
+  let aiModel = "cepat", aiS = null, aiBusy = false;
+  const aiSessions = {};
+  function loadORT() {
+    if (window.ort) return Promise.resolve(window.ort);
+    return new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = ORT_BASE + "ort.min.js"; s.async = true;
+      s.onload = () => (window.ort ? res(window.ort) : rej(new Error("ort")));
+      s.onerror = () => rej(new Error("ort"));
+      document.head.appendChild(s);
+    });
+  }
+  async function openCache() { try { return await caches.open(MODEL_CACHE); } catch (e) { return null; } }
+  async function fetchModel(key, onProg) {
+    const m = MODELS[key], cache = await openCache(), chunks = [];
+    let loaded = 0;
+    for (const part of m.parts) {
+      let resp = null;
+      if (cache) { try { resp = await cache.match(part); } catch (e) {} }
+      if (!resp) {
+        resp = await fetch(part);
+        if (!resp.ok) throw new Error("model-missing");
+        if (cache) { try { await cache.put(part, resp.clone()); } catch (e) {} }
+      }
+      if (resp.body && resp.body.getReader) {
+        const rd = resp.body.getReader();
+        for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); loaded += value.length; onProg(Math.min(1, loaded / m.size)); }
+      } else { const b = new Uint8Array(await resp.arrayBuffer()); chunks.push(b); loaded += b.length; onProg(Math.min(1, loaded / m.size)); }
+    }
+    const out = new Uint8Array(loaded); let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.length; }
+    return out;
+  }
+  async function getAISession(key, onProg) {
+    if (aiSessions[key]) return aiSessions[key];
+    const ort = await loadORT();
+    if (ort.env && ort.env.wasm) { ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT_BASE; }
+    const data = await fetchModel(key, onProg);
+    onProg(1, "Menyalakan mesin AI…");
+    const sess = await ort.InferenceSession.create(data, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    aiSessions[key] = sess; markModels();
+    return sess;
+  }
+  // ubah foto jadi angka yang dimengerti model (320×320, dinormalisasi seperti saat model dilatih)
+  function preprocess(img) {
+    const c = document.createElement("canvas"); c.width = IN; c.height = IN;
+    const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high";
+    x.drawImage(img, 0, 0, IN, IN);
+    const d = x.getImageData(0, 0, IN, IN).data, n = IN * IN;
+    let mx = 1;
+    for (let i = 0; i < d.length; i += 4) { if (d[i] > mx) mx = d[i]; if (d[i + 1] > mx) mx = d[i + 1]; if (d[i + 2] > mx) mx = d[i + 2]; }
+    const mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225], t = new Float32Array(3 * n);
+    for (let p = 0; p < n; p++) for (let ch = 0; ch < 3; ch++) t[ch * n + p] = (d[p * 4 + ch] / mx - mean[ch]) / std[ch];
+    return t;
+  }
+  window.__preprocess = preprocess;
+  function postprocess(out) {
+    let mn = Infinity, mx = -Infinity;
+    for (let i = 0; i < out.length; i++) { const v = out[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    const r = mx - mn || 1, img = new ImageData(IN, IN);
+    for (let i = 0; i < IN * IN; i++) img.data[i * 4 + 3] = ((out[i] - mn) / r) * 255;
+    return img;
+  }
+  const mkCanvas = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+  async function runAI() {
+    if (aiBusy) return;
+    if (inViewer) { toast("Fitur AI hanya jalan di Rupa versi hosting"); return; }
+    aiBusy = true; $("#aiRun").disabled = true; $("#aiProg").hidden = false;
+    const bar = $("#aiBar"), msg = $("#aiMsg");
+    const prog = (f, t) => { bar.style.width = Math.round(f * 100) + "%"; msg.textContent = t || `Mengunduh model AI… ${Math.round(f * 100)}%`; };
+    try {
+      prog(0, aiSessions[aiModel] ? "Menyiapkan…" : "Memuat mesin AI…");
+      const sess = await getAISession(aiModel, prog);
+      prog(1, "Memisahkan objek dari latar… (beberapa detik)");
+      await new Promise((r) => setTimeout(r, 60));
+      const orig = state.base, data = preprocess(orig);
+      const tensor = new window.ort.Tensor("float32", data, [1, 3, IN, IN]);
+      const res = await sess.run({ [sess.inputNames[0]]: tensor });
+      const small = postprocess(res[sess.outputNames[0]].data);
+      startAI(orig, small);
+      $("#aiProg").hidden = true;
+      toast("Latar belakang terpisah. Rapikan bila perlu, lalu Terapkan.");
+    } catch (err) {
+      $("#aiProg").hidden = true;
+      const m = String(err && err.message || err);
+      if (m === "model-missing") toast("File model AI tidak ditemukan di hosting. Pastikan semua file sudah diunggah.");
+      else if (m === "ort") toast("Mesin AI gagal dimuat. Periksa internetmu lalu coba lagi.");
+      else toast("Gagal memproses foto. Coba lagi atau pakai model Cepat.");
+      console.error(err);
+    } finally { aiBusy = false; $("#aiRun").disabled = false; }
+  }
+  window.__runAI = runAI;
+  function startAI(orig, small) {
+    const s = Math.min(1, MASK_MAX / Math.max(orig.width, orig.height));
+    const mw = Math.max(1, Math.round(orig.width * s)), mh = Math.max(1, Math.round(orig.height * s));
+    const sm = mkCanvas(IN, IN); sm.getContext("2d").putImageData(small, 0, 0);
+    const raw = mkCanvas(mw, mh), rx = raw.getContext("2d", { willReadFrequently: true });
+    rx.imageSmoothingQuality = "high"; rx.drawImage(sm, 0, 0, mw, mh);
+    aiS = {
+      orig, mw, mh, rawA: rx.getImageData(0, 0, mw, mh), base: mkCanvas(mw, mh), mask: mkCanvas(mw, mh),
+      add: mkCanvas(mw, mh), erase: mkCanvas(mw, mh), bg: "transparent", color: "#FFFFFF", blur: 12,
+      feather: 2, hard: 0, brush: "off", bsize: 34,
+    };
+    selId = null; syncLayerUI();
+    rebuildBase(); rebuildMask(); syncAIUI(); updateHistoryBtns();
+  }
+  window.__aiState = () => aiS;
+  // ketegasan: menajamkan peralihan tepi masker
+  function rebuildBase() {
+    const k = 1 + aiS.hard * 0.7, src = aiS.rawA.data, out = new ImageData(aiS.mw, aiS.mh), d = out.data;
+    for (let i = 3; i < src.length; i += 4) d[i] = (src[i] - 128) * k + 128;
+    aiS.base.getContext("2d").putImageData(out, 0, 0);
+  }
+  function rebuildMask() {
+    const x = aiS.mask.getContext("2d");
+    x.globalCompositeOperation = "copy"; x.drawImage(aiS.base, 0, 0);
+    x.globalCompositeOperation = "source-over"; x.drawImage(aiS.add, 0, 0);
+    x.globalCompositeOperation = "destination-out"; x.drawImage(aiS.erase, 0, 0);
+    x.globalCompositeOperation = "source-over";
+    aiPreview();
+  }
+  const tmpFg = mkCanvas(1, 1);
+  function composeAI(ctx, W, H, src, fgCanvas) {
+    const fg = fgCanvas || mkCanvas(W, H);
+    if (fg.width !== W || fg.height !== H) { fg.width = W; fg.height = H; }
+    const f = fg.getContext("2d");
+    f.globalCompositeOperation = "copy"; f.drawImage(src, 0, 0, W, H);
+    f.globalCompositeOperation = "destination-in";
+    const fr = aiS.feather * Math.max(W, H) / 900;
+    if (fr > 0) f.filter = `blur(${fr}px)`;
+    f.imageSmoothingQuality = "high"; f.drawImage(aiS.mask, 0, 0, W, H);
+    f.filter = "none"; f.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, W, H);
+    if (aiS.bg === "color") { ctx.fillStyle = aiS.color; ctx.fillRect(0, 0, W, H); }
+    else if (aiS.bg === "blur") {
+      const r = aiS.blur * Math.max(W, H) / 1000;
+      ctx.filter = `blur(${r}px)`; ctx.drawImage(src, -r * 2, -r * 2, W + r * 4, H + r * 4); ctx.filter = "none";
+    }
+    ctx.drawImage(fg, 0, 0);
+  }
+  const aiTmp = mkCanvas(1, 1);
+  let aiRaf = 0;
+  function aiPreview() {
+    if (aiRaf) return;
+    aiRaf = requestAnimationFrame(() => {
+      aiRaf = 0; if (!aiS) return;
+      const pw = photoC.width, ph = photoC.height;
+      aiTmp.width = pw; aiTmp.height = ph;
+      const x = aiTmp.getContext("2d", { willReadFrequently: true });
+      composeAI(x, pw, ph, aiS.orig, tmpFg);
+      previewSrc = x.getImageData(0, 0, pw, ph); pixelsDirty = true; renderNow();
+    });
+  }
+  function endAI() {
+    aiS = null; $("#brushCur").hidden = true;
+    updateHistoryBtns(); syncAIUI();
+  }
+  function applyAI(auto) {
+    if (!aiS) return;
+    const o = aiS.orig, c = mkCanvas(o.width, o.height);
+    composeAI(c.getContext("2d"), o.width, o.height, o);
+    const transparent = aiS.bg === "transparent";
+    endAI();
+    state.base = c; buildPreview(); commit();
+    if (transparent) { $("#fmt").value = "png"; updateOutInfo(); }
+    toast(transparent ? "Latar dihapus. Simpan sebagai PNG agar tetap transparan." : (auto ? "Hapus latar diterapkan" : "Latar baru diterapkan"));
+  }
+  function cancelAI() { if (!aiS) return; endAI(); buildPreview(); syncAIUI(); toast("Hapus latar dibatalkan"); }
+
+  // kuas: hapus atau kembalikan bagian masker
+  let bdrag = null;
+  function dot(ctx, x, y, r, mode) {
+    const g = ctx.createRadialGradient(x, y, r * 0.55, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalCompositeOperation = mode; ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  }
+  function brushPoint(e) {
+    const r = $("#wrap").getBoundingClientRect(), pb = photoBox();
+    const sx = e.clientX - r.left, sy = e.clientY - r.top;
+    const cur = $("#brushCur");
+    cur.hidden = false; cur.style.width = cur.style.height = aiS.bsize + "px";
+    cur.style.transform = `translate(${sx - aiS.bsize / 2}px, ${sy - aiS.bsize / 2}px)`;
+    return { x: (sx - pb.x) / pb.w * aiS.mw, y: (sy - pb.y) / pb.h * aiS.mh, r: aiS.bsize / 2 / pb.w * aiS.mw };
+  }
+  function paint(a, b) {
+    const on = aiS.brush === "restore" ? aiS.add : aiS.erase, off = aiS.brush === "restore" ? aiS.erase : aiS.add;
+    const oc = on.getContext("2d"), fc = off.getContext("2d");
+    const d = Math.hypot(b.x - a.x, b.y - a.y), steps = Math.max(1, Math.ceil(d / (b.r / 3)));
+    for (let i = 1; i <= steps; i++) {
+      const x = a.x + (b.x - a.x) * i / steps, y = a.y + (b.y - a.y) * i / steps;
+      dot(oc, x, y, b.r, "source-over"); dot(fc, x, y, b.r, "destination-out");
+    }
+    rebuildMask();
+  }
+  function brushDown(e) {
+    e.preventDefault();
+    const p = brushPoint(e); bdrag = { last: p };
+    paint(p, p);
+    $("#wrap").setPointerCapture?.(e.pointerId);
+  }
+  window.addEventListener("pointermove", (e) => {
+    if (!aiS || aiS.brush === "off") return;
+    if (!bdrag) { if (e.target.closest && e.target.closest("#wrap")) brushPoint(e); return; }
+    const p = brushPoint(e); paint(bdrag.last, p); bdrag.last = p;
+  });
+  const endBrush = () => { bdrag = null; };
+  window.addEventListener("pointerup", endBrush);
+  window.addEventListener("pointercancel", endBrush);
+  $("#wrap").addEventListener("pointerleave", () => { if (!bdrag) $("#brushCur").hidden = true; });
+
+  // kontrol panel AI
+  $("#models").addEventListener("click", (e) => {
+    const b = e.target.closest(".mcard"); if (!b || aiBusy) return;
+    aiModel = b.dataset.m; syncAIUI();
+  });
+  $("#aiRun").addEventListener("click", runAI);
+  $("#aiApply").addEventListener("click", () => applyAI(false));
+  $("#aiCancel").addEventListener("click", cancelAI);
+  $("#bgModes").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b || !aiS) return;
+    aiS.bg = b.dataset.b; syncAIUI(); aiPreview();
+  });
+  const paintBgSw = makeSwatches($("#bgSw"), false, (v) => { if (!v || !aiS) return; aiS.color = v; paintBgSw(v); aiPreview(); });
+  $("#bgBlur").addEventListener("input", (e) => { if (!aiS) return; aiS.blur = +e.target.value; $("#bgBlurVal").textContent = e.target.value; aiPreview(); });
+  $("#brushMode").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || !aiS) return;
+    aiS.brush = b.dataset.b; if (aiS.brush === "off") $("#brushCur").hidden = true; syncAIUI();
+  });
+  $("#bSize").addEventListener("input", (e) => { if (!aiS) return; aiS.bsize = +e.target.value; $("#bSizeVal").textContent = e.target.value; });
+  $("#aiFeather").addEventListener("input", (e) => { if (!aiS) return; aiS.feather = +e.target.value; $("#aiFeatherVal").textContent = e.target.value; aiPreview(); });
+  $("#aiHard").addEventListener("input", (e) => { if (!aiS) return; aiS.hard = +e.target.value; $("#aiHardVal").textContent = e.target.value; rebuildBase(); rebuildMask(); });
+  async function markModels() {
+    const cache = await openCache();
+    for (const k in MODELS) {
+      const el = $("#st-" + k); let ok = !!aiSessions[k];
+      if (!ok && cache) { try { ok = (await Promise.all(MODELS[k].parts.map((p) => cache.match(p)))).every(Boolean); } catch (e) {} }
+      el.textContent = aiSessions[k] ? "Siap dipakai" : ok ? "Tersimpan di HP" : "Belum diunduh";
+      el.classList.toggle("ok", ok);
+    }
+  }
+  function syncAIUI() {
+    $("#aiViewerNote").hidden = !inViewer;
+    $("#models").querySelectorAll(".mcard").forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === aiModel));
+    $("#aiRunRow").hidden = !!aiS; $("#models").hidden = !!aiS;
+    $("#aiEdit").hidden = !aiS;
+    if (aiS) {
+      $("#bgModes").querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", b.dataset.b === aiS.bg));
+      $("#bgSw").hidden = aiS.bg !== "color"; paintBgSw(aiS.color);
+      $("#bgBlurRow").hidden = aiS.bg !== "blur";
+      $("#brushMode").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.b === aiS.brush));
+      $("#brushRow").hidden = aiS.brush === "off";
+      $("#bSize").value = aiS.bsize; $("#bSizeVal").textContent = aiS.bsize;
+      $("#aiFeather").value = aiS.feather; $("#aiFeatherVal").textContent = aiS.feather;
+      $("#aiHard").value = aiS.hard; $("#aiHardVal").textContent = aiS.hard;
+    }
+    markModels();
+  }
+
+  // =========================================================
+  // BUKA FOTO
+  // =========================================================
+  function decodeImage(f, maxSide, ok, fail) {
+    if (f.type && !f.type.startsWith("image/")) { fail(); return; }
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const s = maxSide ? Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight)) : 1;
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+      const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); ok(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(); };
+    img.src = url;
+  }
+  let fileName = "foto";
+  function loadFile(f) {
+    if (aiS) endAI();
+    if (!f) { toast("Tidak ada foto yang dipilih"); return; }
+    if (f.type && !f.type.startsWith("image/")) { toast("File ini bukan gambar. Pilih JPG, PNG, atau WebP."); return; }
+    decodeImage(f, 0, (c) => {
+      if (currentTab === "kolase") switchTab("atur");
+      state.base = c; state.adj = zeroAdj(); state.filter = { id: "none", amt: 100 }; state.layers = []; state.isSample = false;
+      selId = null; past = []; future = [];
+      buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
+      fileName = (f.name || "foto").replace(/\.[^.]+$/, "") || "foto";
+      col.cells[0] = newCell(c);
+      toast("Foto dibuka");
+    }, () => toast("Foto tidak bisa dibuka. Format HEIC dari iPhone belum didukung, coba JPG atau PNG."));
+  }
+  $("#file").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
+  const stage = $("#stage");
+  stage.addEventListener("dragover", (e) => { e.preventDefault(); $("#drop").hidden = false; });
+  stage.addEventListener("dragleave", (e) => { if (!stage.contains(e.relatedTarget)) $("#drop").hidden = true; });
+  stage.addEventListener("drop", (e) => {
+    e.preventDefault(); $("#drop").hidden = true;
+    if (currentTab === "kolase") loadIntoCells(e.dataTransfer.files, null); else loadFile(e.dataTransfer.files[0]);
+  });
+
+  // =========================================================
+  // SIMPAN
+  // =========================================================
+  const dlPromise = inViewer ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+  function photoOutDims() {
+    const b = state.base, lim = +$("#size").value;
+    const s = lim && Math.max(b.width, b.height) > lim ? lim / Math.max(b.width, b.height) : 1;
+    return [Math.round(b.width * s), Math.round(b.height * s)];
+  }
+  function updateOutInfo() {
+    if (!state.base) return;
+    const [w, h] = photoOutDims(), g = frameGeom(w, h, state.frame);
+    $("#outInfo").textContent = `Hasil: ${g.W} × ${g.H} px · ${$("#fmt").value.toUpperCase()}${state.frame.id !== "none" ? " · dengan bingkai" : ""}`;
+  }
+  $("#fmt").addEventListener("change", updateOutInfo);
+  $("#size").addEventListener("change", updateOutInfo);
+  function renderFull(w, h, fmt) {
+    const p = document.createElement("canvas"); p.width = w; p.height = h;
+    const x = p.getContext("2d", { willReadFrequently: true });
+    x.imageSmoothingQuality = "high";
+    x.drawImage(state.base, 0, 0, w, h);
+    const src = x.getImageData(0, 0, w, h), out = x.createImageData(w, h);
+    adjustPixels(src.data, out.data, w, h, state.adj, state.filter);
+    x.putImageData(out, 0, 0);
+    drawLayers(x, w, h);
+    const g = frameGeom(w, h, state.frame);
+    const c = document.createElement("canvas"); c.width = g.W; c.height = g.H;
+    const cx = c.getContext("2d"); cx.imageSmoothingQuality = "high";
+    if (fmt === "jpg") { cx.fillStyle = "#FFFFFF"; cx.fillRect(0, 0, g.W, g.H); }
+    if (state.frame.id === "none") cx.drawImage(p, 0, 0); else drawFramed(cx, p, g, state.frame);
+    return c;
+  }
+  window.__renderFull = renderFull;
+  $("#saveBtn").addEventListener("click", async () => {
+    $("#busy").hidden = false;
+    await new Promise((r) => setTimeout(r, 30));
+    try {
+      const [w, h] = photoOutDims(), fmt = $("#fmt").value;
+      const c = renderFull(w, h, fmt);
+      const blob = await new Promise((r) => c.toBlob(r, fmt === "jpg" ? "image/jpeg" : "image/png", 0.92));
+      if (!blob) throw new Error("gagal");
+      const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+      const name = `${fileName}-rupa-${stamp}.${fmt}`;
+      $("#busy").hidden = true;
+      const dl = await dlPromise;
+      if (dl) {
+        try { await dl.save({ filename: name, data: blob }); toast("Foto tersimpan"); }
+        catch (err) {
+          if (err && err.code === "declined") toast("Penyimpanan dibatalkan");
+          else if (err && err.code === "rate_limited") toast("Tunggu sebentar, lalu coba simpan lagi");
+          else toast("Foto belum bisa disimpan di tampilan ini");
+        }
+      } else if (inViewer) toast("Penyimpanan tidak tersedia di tampilan ini");
+      else {
+        const url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        toast("Foto diunduh");
+      }
+    } catch (err) { toast("Gagal menyimpan: fotonya mungkin terlalu besar. Pilih ukuran 2048 px."); }
+    finally { $("#busy").hidden = true; }
+  });
+
+  // =========================================================
+  // TAB, TOAST, PINTASAN
+  // =========================================================
+  let currentTab = "atur";
+  const PANES = ["atur", "filter", "potong", "teks", "bingkai", "kolase", "ai", "simpan"];
+  function switchTab(name) {
+    if (aiS && name !== "ai") applyAI(true);
+    currentTab = name;
+    document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", x.dataset.tab === name));
+    for (const p of PANES) $("#pane-" + p).hidden = p !== name;
+    if (name === "potong" || name === "kolase" || name === "ai") selId = null;
+    if (name === "ai") syncAIUI();
+    const isCol = name === "kolase";
+    $("#wrap").hidden = isCol; colView.hidden = !isCol; $("#colHint").hidden = !isCol;
+    $("#sampleChip").hidden = !state.isSample || isCol;
+    cmp.hidden = name === "potong" || isCol;
+    setCropMode(name === "potong");
+    if (isCol) {
+      if (!col.cells.some((c) => c && c.img) && state.base) col.cells[0] = newCell(state.base);
+      paintLayouts(); fitCollage();
+    } else fitView();
+    if (name === "simpan") updateOutInfo();
+    syncLayerUI();
+  }
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+  let tt = 0;
+  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => (t.hidden = true), 2600); }
+  $("#undo").addEventListener("click", undo);
+  $("#redo").addEventListener("click", redo);
+  window.addEventListener("keydown", (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+    if ((e.key === "Delete" || e.key === "Backspace") && !typing && selId) { e.preventDefault(); $("#layDel").click(); return; }
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z" || typing) return;
+    e.preventDefault(); e.shiftKey ? redo() : undo();
+  });
+
+  // =========================================================
+  // CONTOH FOTO BAWAAN
+  // =========================================================
+  function sampleScene() {
+    const W = 1600, H = 1200, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    const sky = x.createLinearGradient(0, 0, 0, H * 0.62);
+    sky.addColorStop(0, "#2B3A67"); sky.addColorStop(0.55, "#C9787A"); sky.addColorStop(1, "#F2B880");
+    x.fillStyle = sky; x.fillRect(0, 0, W, H);
+    const sun = x.createRadialGradient(W * 0.62, H * 0.5, 10, W * 0.62, H * 0.5, 260);
+    sun.addColorStop(0, "rgba(255,240,200,1)"); sun.addColorStop(0.18, "rgba(255,214,150,.95)"); sun.addColorStop(1, "rgba(255,190,120,0)");
+    x.fillStyle = sun; x.fillRect(0, 0, W, H);
+    const ridge = (base, amp, seed, color) => {
+      x.beginPath(); x.moveTo(0, H);
+      for (let i = 0; i <= W; i += 8) x.lineTo(i, base - amp * (0.55 * Math.sin(i / 210 + seed) + 0.3 * Math.sin(i / 83 + seed * 2) + 0.15 * Math.sin(i / 31 + seed * 3)));
+      x.lineTo(W, H); x.closePath(); x.fillStyle = color; x.fill();
+    };
+    ridge(H * 0.56, 90, 1.3, "#6B5672"); ridge(H * 0.6, 70, 4.1, "#4A3E5C");
+    const lake = x.createLinearGradient(0, H * 0.62, 0, H);
+    lake.addColorStop(0, "#C98A80"); lake.addColorStop(1, "#2A3050");
+    x.fillStyle = lake; x.fillRect(0, H * 0.62, W, H);
+    x.fillStyle = "rgba(255,226,170,.55)";
+    for (let i = 0; i < 26; i++) { const ww = 220 - i * 6; x.fillRect(W * 0.62 - ww / 2 + Math.sin(i) * 20, H * 0.64 + i * 14, ww, 3); }
+    ridge(H * 0.98, 60, 2.2, "#1E1B2B");
+    const img = x.getImageData(0, 0, W, H), d = img.data;
+    for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 14; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+    x.putImageData(img, 0, 0);
+    return c;
+  }
+
+  state.base = sampleScene();
+  fileName = "contoh";
+  buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
+  window.__state = state;
+  // mode aplikasi (PWA): hanya aktif saat Rupa di-hosting sendiri
+  if (!inViewer && "serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+  // font yang pernah diunduh di HP ini dimuat ulang diam-diam
+  for (const id of saved.loaded || []) { const f = FONT_BY_ID[id]; if (f && f.state !== "loaded") loadFont(f).catch(() => {}); }
+})();
+</script>
+</body>
+</html>

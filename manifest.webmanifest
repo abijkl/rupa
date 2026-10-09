@@ -1,0 +1,17 @@
+{
+  "name": "Rupa Editor Foto",
+  "short_name": "Rupa",
+  "description": "Editor foto gratis yang berjalan di HP: atur warna, filter, teks, bingkai, kolase, dan hapus latar dengan AI.",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141416",
+  "theme_color": "#141416",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,45 @@
+RUPA — CARA MEMASANG DI HP (GRATIS, LEWAT GITHUB PAGES)
+
+Isi folder ini (semua harus diunggah, jangan ada yang tertinggal):
+  index.html             aplikasi Rupa
+  manifest.webmanifest   identitas aplikasi (nama, ikon, warna)
+  sw.js                  penyimpan offline
+  icon-192.png, icon-512.png, icon-maskable-512.png   ikon aplikasi
+  u2netp.onnx            model AI "Cepat" (4,6 MB)
+  silueta-1.bin s/d silueta-5.bin   model AI "Detail" (44 MB, dipecah lima agar bisa diunggah dari HP)
+  PANDUAN.txt            file ini (tidak wajib diunggah)
+
+LANGKAH 1 — Buat akun dan tempat penyimpanan
+  1. Buka github.com di Chrome, daftar akun gratis.
+  2. Tekan tombol + (atau "New") → "New repository".
+  3. Nama repository: rupa. Pilih "Public". Centang "Add a README file".
+  4. Tekan "Create repository".
+
+LANGKAH 2 — Unggah file
+  1. Ekstrak file ZIP ini dulu di HP (aplikasi File Manager bisa melakukannya).
+  2. Di halaman repository, tekan "Add file" → "Upload files".
+     Kalau tombolnya tidak muncul, buka menu Chrome ⋮ → centang "Situs desktop".
+  3. Unggah bertahap, 3 kali, supaya tidak gagal karena terlalu besar:
+       Unggahan 1: semua file KECUALI silueta-*.bin → Commit changes
+       Unggahan 2: silueta-1.bin, silueta-2.bin → Commit changes
+       Unggahan 3: silueta-3.bin, silueta-4.bin, silueta-5.bin → Commit changes
+
+LANGKAH 3 — Nyalakan GitHub Pages
+  1. Buka tab "Settings" → menu "Pages".
+  2. Bagian "Source": pilih "Deploy from a branch".
+  3. Branch: main, folder: / (root) → tekan "Save".
+  4. Tunggu 1–3 menit. Alamat Rupa akan muncul, bentuknya:
+     https://NAMA-AKUNMU.github.io/rupa/
+
+LANGKAH 4 — Pasang sebagai aplikasi
+  1. Buka alamat tadi di Chrome.
+  2. Menu ⋮ → "Instal aplikasi" (atau "Tambahkan ke layar utama").
+  3. Ikon Rupa muncul di layar HP. Buka dari situ seperti aplikasi biasa.
+
+CATATAN
+  - Model AI baru diunduh saat pertama kali memakai Hapus Latar, lalu tersimpan di HP.
+    Setelah itu fitur AI tetap jalan walau sedang offline.
+  - Untuk memperbarui Rupa nanti: unggah ulang index.html yang baru ke repository yang sama.
+    Aplikasi di HP otomatis mengambil versi terbaru saat dibuka dengan internet.
+  - Model AI: u2netp (U²-Net, lisensi Apache-2.0) dan Silueta (versi ringkas U²-Net dari proyek rembg).
+    Sebelum Rupa dijual atau dipasang di Play Store, cek ulang lisensi model Silueta.
