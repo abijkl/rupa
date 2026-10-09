@@ -414,6 +414,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       <div class="two" id="models">
         <button class="mbtn primary" data-m="cepat">Cepat</button>
         <button class="mbtn" data-m="detail">Detail</button>
+        <button class="mbtn" data-m="orang">Orang</button>
+        <button class="mbtn" data-m="terbaik" hidden>Terbaik</button>
       </div>
       <div class="pane" id="aiProg" hidden><div class="progress"><i id="aiBar"></i></div><p class="hint" id="aiMsg">Menyiapkan…</p></div>
       <div class="pane" id="aiEdit" hidden>
@@ -431,6 +433,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
           <button data-b="erase" aria-pressed="false">Hapus</button>
           <button data-b="restore" aria-pressed="false">Kembalikan</button>
         </div>
+        <label class="toggle" id="smartRow" hidden>Ikuti tepi objek<input type="checkbox" id="bSmart" checked></label>
         <div class="row" id="brushRow" hidden><label for="bSize">Ukuran kuas</label><input type="range" id="bSize" min="8" max="90" value="34"><span class="val" id="bSizeVal">34</span></div>
         <div class="row"><label for="aiFeather">Tepi halus</label><input type="range" id="aiFeather" min="0" max="10" value="2"><span class="val" id="aiFeatherVal">2</span></div>
         <div class="row"><label for="aiHard">Ketegasan</label><input type="range" id="aiHard" min="0" max="10" value="0"><span class="val" id="aiHardVal">0</span></div>
@@ -1552,20 +1555,35 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 
 
   // =========================================================
-  // TAB AI: HAPUS LATAR BELAKANG (berjalan di HP lewat ONNX Runtime Web)
-  // Model: Cepat = U²-Net kecil (u2netp, Apache-2.0). Detail = IS-Net (DIS, Apache-2.0),
-  // bobotnya disimpan setengah ukuran (float16) dan dipecah 10 file agar mudah diunggah.
+  // TAB AI: HAPUS LATAR BELAKANG (semua diproses di HP lewat ONNX Runtime Web)
+  // Cepat   = U²-Net kecil (u2netp)                 · 4,6 MB · ada di hosting sendiri
+  // Detail  = IS-Net general-use (float16)          · 91 MB  · ada di hosting sendiri
+  // Orang   = ORMBG, IS-Net khusus foto manusia     · 84 MB  · diunduh dari Hugging Face
+  // Terbaik = BiRefNet-lite versi WebGPU            · 115 MB · diunduh dari Hugging Face, perlu kartu grafis
   // =========================================================
-  const ORT_VER = "1.17.3", ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
+  const ORT_VER = "1.20.1", ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
+  const HF = "https://huggingface.co/";
+  const IMGNET = { mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] };
   const MODELS = {
-    cepat: { parts: ["u2netp.onnx"], size: 4574861, in: 320, mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] },
-    detail: { parts: Array.from({ length: 10 }, (_, i) => `isnet-${i + 1}.bin`), size: 90633486, in: 1024, mean: [0.5, 0.5, 0.5], std: [1, 1, 1] },
+    cepat: { label: "Cepat", parts: ["u2netp.onnx"], size: 4574861, in: 320, scale: "max", ...IMGNET, out: "minmax" },
+    detail: { label: "Detail", parts: Array.from({ length: 10 }, (_, i) => `isnet-${i + 1}.bin`), size: 90633486, in: 1024, scale: "max", mean: [0.5, 0.5, 0.5], std: [1, 1, 1], out: "minmax", twoPass: true },
+    orang: { label: "Orang", parts: [HF + "d30social/ormbg-ortweb/resolve/b66cbea6744d43dc4177649ec21000d9da71d142/onnx/model_fp16.onnx"], size: 84e6, in: 1024, scale: 255, mean: [0, 0, 0], std: [1, 1, 1], out: "minmax", twoPass: true },
+    terbaik: { label: "Terbaik", parts: [HF + "jiabins0303/birefnet-lite-1024-webgpu/resolve/dc4edd9f7623961aa5ae2b186c1b428f4ed38d6a/onnx/model_fp16.onnx"], size: 115e6, in: 1024, scale: 255, ...IMGNET, out: "sigmoid", twoPass: true, gpuOnly: true },
   };
+  window.__MODELS = MODELS;
   const MODEL_CACHE = "rupa-model-v1", MASK_MAX = 1600;
-  const aiData = {};
-  let useGPU = false;
-  let aiModel = "cepat", aiS = null, aiBusy = false;
-  const aiSessions = {};
+  let aiModel = "cepat", aiS = null, aiBusy = false, useGPU = false, gpuOK = null;
+  const aiSessions = {}, aiData = {};
+  // cek sekali: apakah kartu grafis HP bisa dipakai (WebGPU), termasuk syarat model Terbaik
+  async function checkGPU() {
+    if (gpuOK !== null) return gpuOK;
+    try {
+      const ad = navigator.gpu && await navigator.gpu.requestAdapter();
+      gpuOK = !!ad; useGPU = gpuOK;
+      MODELS.terbaik.ok = !!ad && (ad.limits ? ad.limits.maxStorageBuffersPerShaderStage >= 8 : false);
+    } catch (e) { gpuOK = false; useGPU = false; MODELS.terbaik.ok = false; }
+    return gpuOK;
+  }
   function addScript(file) {
     return new Promise((res, rej) => {
       const s = document.createElement("script");
@@ -1575,68 +1593,142 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       document.head.appendChild(s);
     });
   }
-  // pakai kartu grafis HP (WebGPU) bila tersedia agar jauh lebih cepat; kalau tidak, prosesor biasa (WASM)
   async function loadORT() {
     if (window.ort) return window.ort;
-    try { useGPU = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (e) { useGPU = false; }
-    if (useGPU) { try { return await addScript("ort.webgpu.min.js"); } catch (e) { useGPU = false; } }
-    return addScript("ort.min.js");
+    await checkGPU();
+    let ort = null;
+    if (useGPU) { try { ort = await addScript("ort.webgpu.min.js"); } catch (e) { useGPU = false; } }
+    if (!ort) ort = await addScript("ort.wasm.min.js");
+    if (ort.env && ort.env.wasm) { ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT_BASE; }
+    return ort;
   }
   async function openCache() { try { return await caches.open(MODEL_CACHE); } catch (e) { return null; } }
   async function fetchModel(key, onProg) {
     const m = MODELS[key], cache = await openCache(), chunks = [];
-    let loaded = 0;
+    let loaded = 0, total = m.size;
     for (const part of m.parts) {
       let resp = null;
       if (cache) { try { resp = await cache.match(part); } catch (e) {} }
       if (!resp) {
-        resp = await fetch(part);
-        if (!resp.ok) throw new Error("model-missing");
+        try { resp = await fetch(part); } catch (e) { throw new Error(part.startsWith("http") ? "net" : "model-missing"); }
+        if (!resp.ok) throw new Error(part.startsWith("http") ? "net" : "model-missing");
         if (cache) { try { await cache.put(part, resp.clone()); } catch (e) {} }
       }
+      const len = +resp.headers.get("content-length");
+      if (m.parts.length === 1 && len > 0) total = len;
       if (resp.body && resp.body.getReader) {
         const rd = resp.body.getReader();
-        for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); loaded += value.length; onProg(Math.min(1, loaded / m.size)); }
-      } else { const b = new Uint8Array(await resp.arrayBuffer()); chunks.push(b); loaded += b.length; onProg(Math.min(1, loaded / m.size)); }
+        for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); loaded += value.length; onProg(Math.min(1, loaded / total)); }
+      } else { const b = new Uint8Array(await resp.arrayBuffer()); chunks.push(b); loaded += b.length; onProg(Math.min(1, loaded / total)); }
     }
     const out = new Uint8Array(loaded); let o = 0;
     for (const c of chunks) { out.set(c, o); o += c.length; }
     return out;
   }
+  // MaxPool "ceil_mode=1" tidak didukung mode kartu grafis. Untuk ukuran masukan tetap, ceil_mode=0
+  // memberi hasil identik (sudah diuji: selisih 0), jadi ditambal langsung pada byte model.
+  function patchCeilMode(u8) {
+    const pat = [0x0a, 0x09, 0x63, 0x65, 0x69, 0x6c, 0x5f, 0x6d, 0x6f, 0x64, 0x65, 0x18, 0x01];
+    let n = 0;
+    for (let i = 0, end = u8.length - pat.length; i <= end; i++) {
+      if (u8[i] !== 0x0a || u8[i + 2] !== 0x63) continue;
+      let k = 1; while (k < pat.length && u8[i + k] === pat[k]) k++;
+      if (k === pat.length) { u8[i + pat.length - 1] = 0x00; n++; }
+    }
+    return n;
+  }
+  window.__patchCeilMode = patchCeilMode;
+  async function createSession(key, data, gpu) {
+    const ort = window.ort;
+    const s = await ort.InferenceSession.create(data, gpu ? { executionProviders: ["webgpu"] } : { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    s.__gpu = !!gpu; return s;
+  }
   async function getAISession(key, onProg) {
     if (aiSessions[key]) return aiSessions[key];
-    const ort = await loadORT();
-    if (ort.env && ort.env.wasm) { ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT_BASE; }
+    const m = MODELS[key];
+    await loadORT();
+    if (m.gpuOnly && !(useGPU && m.ok)) throw new Error("gpu-only");
     const data = await fetchModel(key, onProg);
+    patchCeilMode(data);
     onProg(1, "Menyalakan mesin AI…");
     let sess = null;
     if (useGPU) {
-      try { sess = await ort.InferenceSession.create(data, { executionProviders: ["webgpu"] }); sess.__gpu = true; aiData[key] = data; }
-      catch (e) { console.warn("WebGPU tidak bisa dipakai, pindah ke WASM", e); sess = null; }
+      try { sess = await createSession(key, data, true); if (!m.gpuOnly) aiData[key] = data; }
+      catch (e) { console.warn("Kartu grafis tidak bisa dipakai untuk model ini", e); if (m.gpuOnly) throw new Error("gpu-only"); }
     }
-    if (!sess) sess = await ort.InferenceSession.create(data, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    if (!sess) sess = await createSession(key, data, false);
     aiSessions[key] = sess;
     return sess;
   }
+  // float32 → float16 (untuk model yang meminta masukan setengah presisi)
+  const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
+  function toHalf(v) {
+    f32[0] = v; const x = u32[0], sign = (x >>> 16) & 0x8000; let e = ((x >>> 23) & 0xff) - 112, m = x & 0x7fffff;
+    if (e <= 0) return sign; if (e >= 31) return sign | 0x7c00;
+    return sign | (e << 10) | ((m + 0x1000) >>> 13);
+  }
+  function fromHalf(h) {
+    const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+    return e === 0 ? s * m * 5.960464477539063e-8 : e === 31 ? s * Infinity : s * (1 + m / 1024) * Math.pow(2, e - 15);
+  }
+  async function runTensor(sess, data, IN) {
+    const ort = window.ort, name = sess.inputNames[0];
+    let res;
+    try { res = await sess.run({ [name]: new ort.Tensor("float32", data, [1, 3, IN, IN]) }); }
+    catch (e) {
+      if (!/float16|type/i.test(String(e && e.message))) throw e;
+      const h = new Uint16Array(data.length); for (let i = 0; i < data.length; i++) h[i] = toHalf(data[i]);
+      res = await sess.run({ [name]: new ort.Tensor("float16", h, [1, 3, IN, IN]) });
+    }
+    const t = res[sess.outputNames[0]];
+    let d = t.data;
+    if (t.type === "float16") { const o = new Float32Array(d.length); for (let i = 0; i < d.length; i++) o[i] = fromHalf(d[i]); d = o; }
+    return d;
+  }
+  // jalankan model; bila kartu grafis gagal saat proses, ulangi otomatis di prosesor biasa
+  async function runModel(key, data) {
+    const m = MODELS[key];
+    let sess = aiSessions[key];
+    try { return await runTensor(sess, data, m.in); }
+    catch (e) {
+      if (!sess.__gpu || m.gpuOnly || !aiData[key]) throw m.gpuOnly ? new Error("gpu-only") : e;
+      console.warn("Kartu grafis gagal, ulangi di prosesor biasa", e);
+      sess = await createSession(key, aiData[key], false); aiSessions[key] = sess;
+      return await runTensor(sess, data, m.in);
+    } finally { aiData[key] = null; }
+  }
   // ubah foto jadi angka yang dimengerti model (ukuran & normalisasi sama seperti saat model dilatih)
-  function preprocess(img, m) {
+  function preprocess(img, m, sx = 0, sy = 0, sw = img.width, sh = img.height) {
     const IN = m.in, c = document.createElement("canvas"); c.width = IN; c.height = IN;
     const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high";
-    x.drawImage(img, 0, 0, IN, IN);
+    x.drawImage(img, sx, sy, sw, sh, 0, 0, IN, IN);
     const d = x.getImageData(0, 0, IN, IN).data, n = IN * IN;
-    let mx = 1;
-    for (let i = 0; i < d.length; i += 4) { if (d[i] > mx) mx = d[i]; if (d[i + 1] > mx) mx = d[i + 1]; if (d[i + 2] > mx) mx = d[i + 2]; }
+    let mx = 255;
+    if (m.scale === "max") { mx = 1; for (let i = 0; i < d.length; i += 4) { if (d[i] > mx) mx = d[i]; if (d[i + 1] > mx) mx = d[i + 1]; if (d[i + 2] > mx) mx = d[i + 2]; } }
     const { mean, std } = m, t = new Float32Array(3 * n);
     for (let p = 0; p < n; p++) for (let ch = 0; ch < 3; ch++) t[ch * n + p] = (d[p * 4 + ch] / mx - mean[ch]) / std[ch];
     return t;
   }
   window.__preprocess = preprocess;
-  function postprocess(out, IN) {
+  // keluaran model → peta 0..1
+  function toProb(out, m) {
+    const n = m.in * m.in, p = new Float32Array(n);
     let mn = Infinity, mx = -Infinity;
-    for (let i = 0; i < IN * IN; i++) { const v = out[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
-    const r = mx - mn || 1, img = new ImageData(IN, IN);
-    for (let i = 0; i < IN * IN; i++) img.data[i * 4 + 3] = ((out[i] - mn) / r) * 255;
-    return img;
+    for (let i = 0; i < n; i++) { let v = out[i]; if (m.out === "sigmoid") v = 1 / (1 + Math.exp(-v)); p[i] = v; if (v < mn) mn = v; if (v > mx) mx = v; }
+    const r = mx - mn || 1;
+    for (let i = 0; i < n; i++) p[i] = (p[i] - mn) / r;
+    return p;
+  }
+  function probCanvas(p, IN) {
+    const c = mkCanvas(IN, IN), img = new ImageData(IN, IN);
+    for (let i = 0; i < IN * IN; i++) img.data[i * 4 + 3] = p[i] * 255;
+    c.getContext("2d").putImageData(img, 0, 0); return c;
+  }
+  // kotak pembatas objek (bagian dengan nilai > 0,5), dalam pecahan 0..1
+  function probBox(p, IN) {
+    let x0 = IN, y0 = IN, x1 = -1, y1 = -1;
+    for (let y = 0; y < IN; y++) for (let x = 0; x < IN; x++) if (p[y * IN + x] > 0.5) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    return x1 < 0 ? null : { x0: x0 / IN, y0: y0 / IN, x1: (x1 + 1) / IN, y1: (y1 + 1) / IN };
   }
   const mkCanvas = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
   const setModelBtns = (dis) => $("#models").querySelectorAll(".mbtn").forEach((b) => { b.disabled = dis; });
@@ -1647,48 +1739,72 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     aiBusy = true; setModelBtns(true); $("#aiProg").hidden = false;
     const bar = $("#aiBar"), msg = $("#aiMsg");
     const prog = (f, t) => { bar.style.width = Math.round(f * 100) + "%"; msg.textContent = t || `Mengunduh model AI… ${Math.round(f * 100)}%`; };
+    const pause = () => new Promise((r) => setTimeout(r, 60));
     try {
-      prog(0, aiSessions[aiModel] ? "Menyiapkan…" : "Memuat mesin AI…");
-      const sess = await getAISession(aiModel, prog);
-      const m = MODELS[aiModel], IN = m.in;
-      prog(1, aiModel === "detail" ? "Memisahkan objek dengan teliti… (bisa 5–40 detik, jangan tutup aplikasi)" : "Memisahkan objek dari latar…");
-      await new Promise((r) => setTimeout(r, 80));
-      const orig = state.base, data = preprocess(orig, m);
-      const feeds = () => ({ [sess.inputNames[0]]: new window.ort.Tensor("float32", data, [1, 3, IN, IN]) });
-      let sess2 = sess, res;
-      try { res = await sess2.run(feeds()); }
+      let key2 = aiModel;
+      prog(0, aiSessions[key2] ? "Menyiapkan…" : "Memuat mesin AI…");
+      try { await getAISession(key2, prog); }
       catch (e) {
-        if (!sess2.__gpu || !aiData[aiModel]) throw e;
-        console.warn("WebGPU gagal, ulangi dengan WASM", e);
-        sess2 = await window.ort.InferenceSession.create(aiData[aiModel], { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
-        aiSessions[aiModel] = sess2;
-        res = await sess2.run({ [sess2.inputNames[0]]: new window.ort.Tensor("float32", data, [1, 3, IN, IN]) });
+        if (String(e.message) !== "gpu-only") throw e;
+        toast("HP ini belum mendukung mode Terbaik, memakai Detail");
+        key2 = aiModel = "detail"; await getAISession(key2, prog);
       }
-      aiData[aiModel] = null;
-      const small = postprocess(res[sess2.outputNames[0]].data, IN);
-      startAI(orig, small, IN);
+      const m = MODELS[key2], IN = m.in, orig = state.base, W = orig.width, H = orig.height;
+      const slow = IN > 320 ? " (bisa 5–40 detik, jangan tutup aplikasi)" : "";
+      prog(1, (m.twoPass ? "Tahap 1/2: mencari objek…" : "Memisahkan objek dari latar…") + slow);
+      await pause();
+      let p1;
+      try { p1 = toProb(await runModel(key2, preprocess(orig, m)), m); }
+      catch (e) {
+        if (String(e.message) !== "gpu-only") throw e;
+        toast("Mode Terbaik gagal di HP ini, memakai Detail");
+        key2 = aiModel = "detail"; await getAISession(key2, prog);
+        p1 = toProb(await runModel(key2, preprocess(orig, MODELS.detail)), MODELS.detail);
+      }
+      const mm = MODELS[key2];
+      // masker penuh pada resolusi kerja
+      const sc = Math.min(1, MASK_MAX / Math.max(W, H));
+      const mw = Math.max(1, Math.round(W * sc)), mh = Math.max(1, Math.round(H * sc));
+      const raw = mkCanvas(mw, mh), rx = raw.getContext("2d", { willReadFrequently: true });
+      rx.imageSmoothingQuality = "high"; rx.drawImage(probCanvas(p1, mm.in), 0, 0, mw, mh);
+      // tahap 2: jalankan lagi hanya pada area objek supaya tepinya dilihat lebih besar
+      const b = mm.twoPass ? probBox(p1, mm.in) : null;
+      if (b) {
+        const mx = (b.x1 - b.x0) * 0.1 + 0.02, my = (b.y1 - b.y0) * 0.1 + 0.02;
+        const cx0 = Math.max(0, b.x0 - mx), cy0 = Math.max(0, b.y0 - my), cx1 = Math.min(1, b.x1 + mx), cy1 = Math.min(1, b.y1 + my);
+        const area = (cx1 - cx0) * (cy1 - cy0);
+        // hanya berguna bila objek cukup kecil dan foto lebih besar dari ukuran masukan model
+        if (area < 0.7 && Math.max(W * (cx1 - cx0), H * (cy1 - cy0)) > mm.in * 0.6) {
+          prog(1, "Tahap 2/2: merapikan tepi objek…" + slow);
+          await pause();
+          const sx = Math.round(cx0 * W), sy = Math.round(cy0 * H), sw = Math.max(1, Math.round((cx1 - cx0) * W)), sh = Math.max(1, Math.round((cy1 - cy0) * H));
+          const p2 = toProb(await runModel(key2, preprocess(orig, mm, sx, sy, sw, sh)), mm);
+          const dx = Math.round(sx * sc), dy = Math.round(sy * sc), dw = Math.max(1, Math.round(sw * sc)), dh = Math.max(1, Math.round(sh * sc));
+          rx.clearRect(dx, dy, dw, dh); rx.drawImage(probCanvas(p2, mm.in), dx, dy, dw, dh);
+        }
+      }
+      startAI(orig, raw);
       $("#aiProg").hidden = true;
-      toast("Latar belakang terpisah. Rapikan bila perlu, lalu Terapkan.");
+      toast(`Latar terpisah (${mm.label}). Rapikan bila perlu, lalu Terapkan.`);
     } catch (err) {
       $("#aiProg").hidden = true;
       const m = String(err && err.message || err);
       if (m === "model-missing") toast("File model AI tidak ditemukan di hosting. Pastikan semua file sudah diunggah.");
+      else if (m === "net") toast("Model gagal diunduh. Periksa internetmu lalu coba lagi.");
       else if (m === "ort") toast("Mesin AI gagal dimuat. Periksa internetmu lalu coba lagi.");
       else toast("Gagal memproses foto. Coba lagi atau pakai model Cepat.");
       console.error(err);
     } finally { aiBusy = false; setModelBtns(false); }
   }
   window.__runAI = runAI;
-  function startAI(orig, small, IN) {
-    const s = Math.min(1, MASK_MAX / Math.max(orig.width, orig.height));
-    const mw = Math.max(1, Math.round(orig.width * s)), mh = Math.max(1, Math.round(orig.height * s));
-    const sm = mkCanvas(IN, IN); sm.getContext("2d").putImageData(small, 0, 0);
-    const raw = mkCanvas(mw, mh), rx = raw.getContext("2d", { willReadFrequently: true });
-    rx.imageSmoothingQuality = "high"; rx.drawImage(sm, 0, 0, mw, mh);
+  function startAI(orig, raw) {
+    const mw = raw.width, mh = raw.height;
+    const pc = mkCanvas(mw, mh), px = pc.getContext("2d", { willReadFrequently: true });
+    px.imageSmoothingQuality = "high"; px.drawImage(orig, 0, 0, mw, mh);
     aiS = {
-      orig, mw, mh, rawA: rx.getImageData(0, 0, mw, mh), base: mkCanvas(mw, mh), mask: mkCanvas(mw, mh),
-      add: mkCanvas(mw, mh), erase: mkCanvas(mw, mh), bg: "transparent", color: "#FFFFFF", blur: 12,
-      feather: 2, hard: 0, brush: "off", bsize: 34,
+      orig, mw, mh, rawA: raw.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, mw, mh), px: px.getImageData(0, 0, mw, mh).data,
+      base: mkCanvas(mw, mh), mask: mkCanvas(mw, mh), add: mkCanvas(mw, mh), erase: mkCanvas(mw, mh),
+      bg: "transparent", color: "#FFFFFF", blur: 12, feather: 2, hard: 0, brush: "off", bsize: 34, smart: true,
     };
     selId = null; syncLayerUI();
     rebuildBase(); rebuildMask(); syncAIUI(); updateHistoryBtns();
@@ -1756,43 +1872,71 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   }
   function cancelAI() { if (!aiS) return; endAI(); buildPreview(); syncAIUI(); toast("Hapus latar dibatalkan"); }
 
-  // kuas: hapus atau kembalikan bagian masker
+  // kuas: hapus atau kembalikan bagian masker.
+  // Mode "ikuti tepi": kuas hanya kuat pada piksel yang warnanya mirip dengan titik awal sapuan,
+  // jadi saat menyapu latar di dekat baju, baju yang warnanya berbeda tidak ikut terhapus.
   let bdrag = null;
-  function dot(ctx, x, y, r, mode) {
-    const g = ctx.createRadialGradient(x, y, r * 0.55, x, y, r);
-    g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.globalCompositeOperation = mode; ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
+  const SMART_SIGMA = 30;
+  function dab(cx, cy, r, ref) {
+    const S = aiS, restore = S.brush === "restore";
+    const on = restore ? S.add : S.erase, off = restore ? S.erase : S.add;
+    const x0 = Math.max(0, Math.floor(cx - r)), y0 = Math.max(0, Math.floor(cy - r));
+    const x1 = Math.min(S.mw, Math.ceil(cx + r)), y1 = Math.min(S.mh, Math.ceil(cy + r));
+    const w = x1 - x0, h = y1 - y0; if (w <= 0 || h <= 0) return;
+    const oc = on.getContext("2d", { willReadFrequently: true }), fc = off.getContext("2d", { willReadFrequently: true });
+    const A = oc.getImageData(x0, y0, w, h), B = fc.getImageData(x0, y0, w, h), a = A.data, bb = B.data;
+    const P = S.px, MW = S.mw, s2 = 2 * SMART_SIGMA * SMART_SIGMA, inv = 1 / r;
+    for (let yy = 0; yy < h; yy++) {
+      const py = y0 + yy, dy = (py + 0.5 - cy) * inv;
+      for (let xx = 0; xx < w; xx++) {
+        const px = x0 + xx, dx = (px + 0.5 - cx) * inv, d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= 1) continue;
+        let k = d < 0.5 ? 1 : 1 - (d - 0.5) * 2; k = k * k * (3 - 2 * k);
+        if (ref) {
+          const pi = (py * MW + px) * 4, dr = P[pi] - ref[0], dg = P[pi + 1] - ref[1], db = P[pi + 2] - ref[2];
+          k *= Math.exp(-(dr * dr + dg * dg + db * db) / s2);
+        }
+        if (k < 0.01) continue;
+        const i = (yy * w + xx) * 4 + 3;
+        const v = k * 255; if (v > a[i]) a[i] = v;
+        bb[i] = bb[i] * (1 - k);
+      }
+    }
+    oc.putImageData(A, x0, y0); fc.putImageData(B, x0, y0);
   }
+  function sampleColor(x, y) {
+    const S = aiS, P = S.px; let r = 0, g = 0, b = 0, n = 0;
+    for (let yy = Math.round(y) - 1; yy <= Math.round(y) + 1; yy++) for (let xx = Math.round(x) - 1; xx <= Math.round(x) + 1; xx++) {
+      if (xx < 0 || yy < 0 || xx >= S.mw || yy >= S.mh) continue;
+      const i = (yy * S.mw + xx) * 4; r += P[i]; g += P[i + 1]; b += P[i + 2]; n++;
+    }
+    return n ? [r / n, g / n, b / n] : null;
+  }
+  window.__dabTest = (x, y, r, mode, smart) => { aiS.brush = mode; dab(x, y, r, smart ? sampleColor(x, y) : null); rebuildMask(); };
   function brushPoint(e) {
     const lp = localPt(e), pb = photoBox(), sx = lp.x, sy = lp.y;
     const size = aiS.bsize / lp.k; // ukuran kuas tetap sama di layar walau diperbesar
     const cur = $("#brushCur");
     cur.hidden = false; cur.style.width = cur.style.height = size + "px";
     cur.style.transform = `translate(${sx - size / 2}px, ${sy - size / 2}px)`;
-    return { x: (sx - pb.x) / pb.w * aiS.mw, y: (sy - pb.y) / pb.h * aiS.mh, r: size / 2 / pb.w * aiS.mw };
+    return { x: (sx - pb.x) / pb.w * aiS.mw, y: (sy - pb.y) / pb.h * aiS.mh, r: Math.max(1, size / 2 / pb.w * aiS.mw) };
   }
-  function paint(a, b) {
-    const on = aiS.brush === "restore" ? aiS.add : aiS.erase, off = aiS.brush === "restore" ? aiS.erase : aiS.add;
-    const oc = on.getContext("2d"), fc = off.getContext("2d");
-    const d = Math.hypot(b.x - a.x, b.y - a.y), steps = Math.max(1, Math.ceil(d / (b.r / 3)));
-    for (let i = 1; i <= steps; i++) {
-      const x = a.x + (b.x - a.x) * i / steps, y = a.y + (b.y - a.y) * i / steps;
-      dot(oc, x, y, b.r, "source-over"); dot(fc, x, y, b.r, "destination-out");
-    }
+  function paint(a, b, ref) {
+    const d = Math.hypot(b.x - a.x, b.y - a.y), steps = Math.max(1, Math.ceil(d / (b.r / 2.5)));
+    for (let i = 1; i <= steps; i++) dab(a.x + (b.x - a.x) * i / steps, a.y + (b.y - a.y) * i / steps, b.r, ref);
     rebuildMask();
   }
   function brushDown(e) {
     e.preventDefault();
-    const p = brushPoint(e); bdrag = { last: p };
-    paint(p, p);
+    const p = brushPoint(e), ref = aiS.smart ? sampleColor(p.x, p.y) : null;
+    bdrag = { last: p, ref };
+    paint(p, p, ref);
     $("#wrap").setPointerCapture?.(e.pointerId);
   }
   window.addEventListener("pointermove", (e) => {
     if (!aiS || aiS.brush === "off") return;
     if (!bdrag) { if (e.target.closest && e.target.closest("#wrap")) brushPoint(e); return; }
-    const p = brushPoint(e); paint(bdrag.last, p); bdrag.last = p;
+    const p = brushPoint(e); paint(bdrag.last, p, bdrag.ref); bdrag.last = p;
   });
   const endBrush = () => { bdrag = null; };
   window.addEventListener("pointerup", endBrush);
@@ -1816,6 +1960,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     const b = e.target.closest("button"); if (!b || !aiS) return;
     aiS.brush = b.dataset.b; if (aiS.brush === "off") $("#brushCur").hidden = true; syncAIUI();
   });
+  $("#bSmart").addEventListener("change", (e) => { if (aiS) aiS.smart = e.target.checked; });
   $("#bSize").addEventListener("input", (e) => { if (!aiS) return; aiS.bsize = +e.target.value; $("#bSizeVal").textContent = e.target.value; });
   $("#aiFeather").addEventListener("input", (e) => { if (!aiS) return; aiS.feather = +e.target.value; $("#aiFeatherVal").textContent = e.target.value; aiPreview(); });
   $("#aiHard").addEventListener("input", (e) => { if (!aiS) return; aiS.hard = +e.target.value; $("#aiHardVal").textContent = e.target.value; rebuildBase(); rebuildMask(); });
@@ -1823,6 +1968,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   openCache().then((c) => c && c.keys().then((ks) => ks.forEach((r) => { if (/silueta-/.test(r.url)) c.delete(r); }))).catch(() => {});
   function syncAIUI() {
     $("#aiViewerNote").hidden = !inViewer;
+    if (gpuOK === null && !inViewer) checkGPU().then(() => { $("#models [data-m=terbaik]").hidden = !MODELS.terbaik.ok; });
+    else $("#models [data-m=terbaik]").hidden = !MODELS.terbaik.ok;
     $("#models").hidden = !!aiS;
     $("#aiEdit").hidden = !aiS;
     if (aiS) {
@@ -1830,7 +1977,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       $("#bgSw").hidden = aiS.bg !== "color"; paintBgSw(aiS.color);
       $("#bgBlurRow").hidden = aiS.bg !== "blur";
       $("#brushMode").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.b === aiS.brush));
-      $("#brushRow").hidden = aiS.brush === "off";
+      $("#brushRow").hidden = aiS.brush === "off"; $("#smartRow").hidden = aiS.brush === "off";
+      $("#bSmart").checked = aiS.smart;
       $("#bSize").value = aiS.bsize; $("#bSizeVal").textContent = aiS.bsize;
       $("#aiFeather").value = aiS.feather; $("#aiFeatherVal").textContent = aiS.feather;
       $("#aiHard").value = aiS.hard; $("#aiHardVal").textContent = aiS.hard;

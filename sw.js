@@ -1,5 +1,5 @@
 // Rupa: penyimpan offline. Naikkan VERSI setiap kali file aplikasi diperbarui.
-const VERSI = "rupa-app-v2";
+const VERSI = "rupa-app-v3";
 const INTI = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 const LUAR = "rupa-luar-v1"; // font Google dan mesin AI dari CDN
 
@@ -14,8 +14,8 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // file model AI dikelola langsung oleh aplikasi
-  if (url.origin === location.origin && /\.(onnx|bin)$/.test(url.pathname)) return;
+  // file model AI (di hosting sendiri maupun Hugging Face) dikelola langsung oleh aplikasi
+  if (/\.(onnx|bin)$/.test(url.pathname) || /huggingface\.co$|hf\.co$|xethub\.hf\.co$/.test(url.hostname)) return;
   // halaman utama: coba internet dulu agar selalu versi terbaru, kalau offline pakai simpanan
   if (req.mode === "navigate") {
     e.respondWith(fetch(req).then((r) => { const c = r.clone(); caches.open(VERSI).then((k) => k.put("index.html", c)); return r; })

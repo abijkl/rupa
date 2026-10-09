@@ -1,46 +1,30 @@
-RUPA — CARA MEMASANG DI HP (GRATIS, LEWAT GITHUB PAGES)
+RUPA — PANDUAN UPDATE (GITHUB PAGES)
 
-Isi folder ini (semua harus diunggah, jangan ada yang tertinggal):
-  index.html             aplikasi Rupa
-  manifest.webmanifest   identitas aplikasi (nama, ikon, warna)
-  sw.js                  penyimpan offline
+Isi zip ini:
+  index.html             aplikasi Rupa (versi baru)
+  sw.js                  penyimpan offline (versi baru)
+  manifest.webmanifest   identitas aplikasi
   icon-192.png, icon-512.png, icon-maskable-512.png   ikon aplikasi
   u2netp.onnx            model AI "Cepat" (4,6 MB)
-  isnet-1.bin s/d isnet-10.bin   model AI "Detail" (91 MB, dipecah sepuluh agar bisa diunggah dari HP)
   PANDUAN.txt            file ini (tidak wajib diunggah)
 
-LANGKAH 1 — Buat akun dan tempat penyimpanan
-  1. Buka github.com di Chrome, daftar akun gratis.
-  2. Tekan tombol + (atau "New") → "New repository".
-  3. Nama repository: rupa. Pilih "Public". Centang "Add a README file".
-  4. Tekan "Create repository".
+Tidak ada di zip ini (sudah ada di GitHub-mu, jangan dihapus):
+  isnet-1.bin s/d isnet-10.bin   model AI "Detail"
 
-LANGKAH 2 — Unggah file
-  1. Ekstrak file ZIP ini dulu di HP (aplikasi File Manager bisa melakukannya).
-  2. Di halaman repository, tekan "Add file" → "Upload files".
-     Kalau tombolnya tidak muncul, buka menu Chrome ⋮ → centang "Situs desktop".
-  3. Unggah bertahap, 3 kali, supaya tidak gagal karena terlalu besar:
-       Unggahan 1: semua file KECUALI isnet-*.bin → Commit changes
-       Unggahan 2: isnet-1.bin, isnet-2.bin, isnet-3.bin → Commit changes
-       Unggahan 3: isnet-4.bin, isnet-5.bin, isnet-6.bin → Commit changes
-       Unggahan 4: isnet-7.bin, isnet-8.bin, isnet-9.bin, isnet-10.bin (kalau gagal, bagi dua) → Commit changes
+Diunduh otomatis dari Hugging Face saat pertama dipakai (tidak perlu diunggah):
+  model "Orang"   (ORMBG, 84 MB)
+  model "Terbaik" (BiRefNet-lite, 115 MB, hanya muncul di HP yang mendukung kartu grafis/WebGPU)
 
-LANGKAH 3 — Nyalakan GitHub Pages
-  1. Buka tab "Settings" → menu "Pages".
-  2. Bagian "Source": pilih "Deploy from a branch".
-  3. Branch: main, folder: / (root) → tekan "Save".
-  4. Tunggu 1–3 menit. Alamat Rupa akan muncul, bentuknya:
-     https://NAMA-AKUNMU.github.io/rupa/
-
-LANGKAH 4 — Pasang sebagai aplikasi
-  1. Buka alamat tadi di Chrome.
-  2. Menu ⋮ → "Instal aplikasi" (atau "Tambahkan ke layar utama").
-  3. Ikon Rupa muncul di layar HP. Buka dari situ seperti aplikasi biasa.
+CARA UPDATE
+  1. Ekstrak zip ini di HP.
+  2. Buka github.com/abijkl/rupa → Add file → Upload files.
+     (Kalau tombolnya tidak muncul: menu Chrome ⋮ → centang "Situs desktop".)
+  3. Pilih SEMUA file hasil ekstrak → tunggu selesai → Commit changes.
+     File lama dengan nama sama otomatis tertimpa.
+  4. Tunggu 1–3 menit, lalu tutup Rupa sepenuhnya dan buka lagi dengan internet menyala.
 
 CATATAN
-  - Model AI baru diunduh saat pertama kali memakai Hapus Latar, lalu tersimpan di HP.
-    Setelah itu fitur AI tetap jalan walau sedang offline.
-  - Untuk memperbarui Rupa nanti: unggah ulang index.html yang baru ke repository yang sama.
-    Aplikasi di HP otomatis mengambil versi terbaru saat dibuka dengan internet.
-  - Model AI: u2netp (U²-Net) dan IS-Net general-use (DIS), keduanya lisensi Apache-2.0.
-    Bobot IS-Net disimpan dalam float16 (setengah ukuran, hasil praktis sama).
+  - Setiap model AI diunduh sekali saat pertama dipakai, lalu tersimpan di HP dan bisa dipakai offline.
+    Pakai WiFi saat pertama mencoba Orang dan Terbaik.
+  - Lisensi model: u2netp & IS-Net (Apache-2.0), ORMBG (Apache-2.0), BiRefNet-lite (MIT).
+    Sebagian data latihnya (misalnya DIS5K, P3M-10K) hanya untuk riset; cek ulang sebelum Rupa dimonetisasi.
