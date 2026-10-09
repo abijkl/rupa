@@ -52,12 +52,15 @@ a{color:var(--accent)}
 .openbtn svg{width:18px;height:18px}
 
 /* Panggung */
-.stage{position:relative;background:var(--stage);display:grid;place-items:center;padding:14px 16px 56px;overflow:hidden}
-.wrap{position:relative;line-height:0;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none}
+.stage{position:relative;background:var(--stage);display:grid;place-items:center;padding:14px 16px 56px;overflow:hidden;touch-action:none}
+.wrap{position:relative;line-height:0;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none;transform-origin:50% 50%;--inv:1}
 #view{width:100%;height:100%;display:block;background:repeating-conic-gradient(#3B3B42 0% 25%, #26262B 0% 50%) 50%/18px 18px}
 #colView{display:block;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none;max-width:100%}
 .clip{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.chip-sample{position:absolute;left:16px;top:14px;font-size:12px;background:rgba(20,20,22,.8);border:1px solid var(--line);padding:5px 10px;border-radius:999px;color:var(--muted)}
+.zoombar{position:absolute;left:16px;top:14px;display:flex;align-items:center;height:34px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.85);overflow:hidden}
+.zoombar button{height:100%;min-width:36px;padding:0 10px;border:0;background:transparent;font-size:17px;line-height:1}
+.zoombar button:disabled{opacity:.35;cursor:default}
+.zoombar #zoomVal{font-family:var(--f-mono);font-size:12px;min-width:54px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
 .compare{position:absolute;right:16px;top:14px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.85);font-size:13px;user-select:none;-webkit-user-select:none;touch-action:none}
 .compare.on{background:var(--fg);color:var(--bg)}
 .drop{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:14px;display:grid;place-items:center;background:rgba(13,13,15,.8);font-weight:600}
@@ -68,7 +71,7 @@ a{color:var(--accent)}
 .crop::before,.crop::after{content:"";position:absolute;inset:0;pointer-events:none}
 .crop::before{border-left:1px solid rgba(255,255,255,.35);border-right:1px solid rgba(255,255,255,.35);left:33.33%;right:33.33%}
 .crop::after{border-top:1px solid rgba(255,255,255,.35);border-bottom:1px solid rgba(255,255,255,.35);top:33.33%;bottom:33.33%}
-.handle{position:absolute;width:38px;height:38px;touch-action:none;display:grid}
+.handle{position:absolute;width:38px;height:38px;touch-action:none;display:grid;transform:scale(var(--inv,1))}
 .handle::after{content:"";width:18px;height:18px;border:0 solid var(--accent)}
 .nw{left:-2px;top:-2px;cursor:nwse-resize;place-items:start}.nw::after{border-left-width:4px;border-top-width:4px}
 .ne{right:-2px;top:-2px;cursor:nesw-resize;place-items:start end}.ne::after{border-right-width:4px;border-top-width:4px}
@@ -78,7 +81,7 @@ a{color:var(--accent)}
 
 /* Kotak pilihan teks */
 .sel{position:absolute;left:0;top:0;border:1.5px dashed #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);pointer-events:none;transform-origin:center}
-.selh{position:absolute;right:-17px;bottom:-17px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;pointer-events:auto;touch-action:none;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.selh{transform:scale(var(--inv,1));position:absolute;right:-17px;bottom:-17px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;pointer-events:auto;touch-action:none;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .selh svg{width:18px;height:18px}
 .seltools{position:absolute;left:16px;right:16px;bottom:10px;display:flex;justify-content:center;gap:6px}
 .seltools button{height:36px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.92);font-size:13px;white-space:nowrap}
@@ -175,7 +178,24 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 
 .toast{position:fixed;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);text-align:center;z-index:5}
 .busy{position:absolute;inset:0;display:grid;place-items:center;background:rgba(13,13,15,.6);font-size:14px}
-.brushcur{position:absolute;left:0;top:0;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-50%)}
+.brushcur{position:absolute;left:0;top:0;border:calc(2px * var(--inv,1)) solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-50%)}
+.mbtn{height:56px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:17px;font-family:var(--f-display)}
+.mbtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.mbtn:disabled{opacity:.45;cursor:default}
+.welcome{position:fixed;inset:0;z-index:4;background:var(--bg);display:flex;justify-content:center;overflow-y:auto}
+.wcontent{width:100%;max-width:520px;display:flex;flex-direction:column;justify-content:center;gap:28px;padding:calc(32px + env(safe-area-inset-top,0px)) 24px calc(32px + env(safe-area-inset-bottom,0px))}
+.wmark{display:flex;align-items:center;gap:12px;font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:-.02em}
+.wlogo{width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:24px}
+.wtitle{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,10vw,46px);line-height:1.05;letter-spacing:-.025em;margin:0;text-wrap:balance}
+.wtitle em{font-style:normal;color:var(--accent)}
+.wbtns{display:flex;flex-direction:column;gap:12px}
+.wbtn{position:relative;display:flex;align-items:center;gap:14px;padding:18px;border-radius:16px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.wbtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.wbtn svg{width:28px;height:28px;flex:none}
+.wbtn b{display:block;font-size:18px;font-weight:700}
+.wbtn small{display:block;font-size:13px;opacity:.75;margin-top:2px}
+.wbtn:focus-within{outline:2px solid var(--fg);outline-offset:3px}
+.wfoot{margin:0;font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
 .mcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px;border-radius:12px;border:1px solid var(--line);background:transparent;text-align:left;min-width:0}
 .mcard b{font-size:15px}
 .mcard span{font-size:12px;color:var(--muted)}
@@ -190,6 +210,26 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 </style>
 </head>
 <body>
+
+<section class="welcome" id="welcome">
+  <div class="wcontent">
+    <div class="wmark"><span class="wlogo">R</span>Rupa</div>
+    <h1 class="wtitle">Mau edit foto <em>apa</em> hari ini?</h1>
+    <div class="wbtns">
+      <label class="wbtn primary" for="wFile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        <span><b>Pilih foto</b><small>Buka dari galeri untuk mulai mengedit</small></span>
+        <input type="file" id="wFile" accept="image/*" class="filein">
+      </label>
+      <label class="wbtn" for="wCol">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="8" height="18" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+        <span><b>Buat kolase</b><small>Gabungkan 2 sampai 9 foto</small></span>
+        <input type="file" id="wCol" accept="image/*" multiple class="filein">
+      </label>
+    </div>
+    <p class="wfoot">Gratis · semua diproses di HP-mu</p>
+  </div>
+</section>
 
 <div class="app">
   <header class="top">
@@ -221,7 +261,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       </div>
     </div>
     <canvas id="colView" hidden></canvas>
-    <span class="chip-sample" id="sampleChip">Contoh foto</span>
+    <div class="zoombar" id="zoomBar">
+      <button id="zoomOut" aria-label="Perkecil">−</button>
+      <button id="zoomVal" aria-label="Kembali ke ukuran layar">100%</button>
+      <button id="zoomIn" aria-label="Perbesar">+</button>
+    </div>
     <button class="compare" id="compare" aria-label="Tahan untuk melihat foto asli">Tahan: asli</button>
     <p class="stagehint" id="colHint" hidden>Ketuk kotak kosong untuk memilih foto. Geser foto di dalam kotak untuk mengatur posisinya.</p>
     <div class="seltools" id="selTools" hidden>
@@ -366,13 +410,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     <!-- AI -->
     <div class="pane" id="pane-ai" hidden>
       <div class="sub">Hapus latar belakang</div>
-      <p class="hint">Memisahkan orang atau benda dari latarnya. Semua diproses di HP-mu, fotonya tidak dikirim ke mana pun.</p>
       <p class="note" id="aiViewerNote" hidden>Di tampilan Claude, fitur AI tidak bisa jalan karena pembatasan keamanan. Buka Rupa dari hostingmu sendiri untuk memakainya.</p>
       <div class="two" id="models">
-        <button class="mcard" data-m="cepat" aria-pressed="true"><b>Cepat</b><span>4,6 MB · ringan untuk semua HP</span><em id="st-cepat">Belum diunduh</em></button>
-        <button class="mcard" data-m="detail" aria-pressed="false"><b>Detail</b><span>44 MB · tepi lebih rapi</span><em id="st-detail">Belum diunduh</em></button>
+        <button class="mbtn primary" data-m="cepat">Cepat</button>
+        <button class="mbtn" data-m="detail">Detail</button>
       </div>
-      <div class="actions" id="aiRunRow"><button class="btn primary" id="aiRun">Hapus latar belakang</button></div>
       <div class="pane" id="aiProg" hidden><div class="progress"><i id="aiBar"></i></div><p class="hint" id="aiMsg">Menyiapkan…</p></div>
       <div class="pane" id="aiEdit" hidden>
         <div class="sub">Latar baru</div>
@@ -709,7 +751,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     previewSrc = pctx.getImageData(0, 0, pw, ph);
     previewOut = pctx.createImageData(pw, ph);
     pixelsDirty = true;
-    $("#sampleChip").hidden = !state.isSample || currentTab === "kolase";
+    resetZoom();
     renderNow();
     if (cropping) resetCropBox();
     updateDims(); updateOutInfo(); buildFilterThumbs(); buildFrameThumbs();
@@ -741,10 +783,98 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     wrap.style.width = Math.floor(view.width * s) + "px";
     wrap.style.height = Math.floor(view.height * s) + "px";
     if (cropping) drawCropBox();
+    clampPan(); applyZoom();
     updateSelBox();
     if (currentTab === "kolase") fitCollage();
   }
   new ResizeObserver(fitView).observe($("#stage"));
+
+  // =========================================================
+  // ZOOM: cubit dua jari, geser, roda mouse, tombol − / + / 100%
+  // =========================================================
+  const ZMAX = 8, wrapEl = $("#wrap");
+  const zoom = { s: 1, tx: 0, ty: 0 };
+  function applyZoom() {
+    wrapEl.style.transform = zoom.s === 1 && !zoom.tx && !zoom.ty ? "" : `translate(${zoom.tx}px, ${zoom.ty}px) scale(${zoom.s})`;
+    wrapEl.style.setProperty("--inv", String(1 / zoom.s));
+    $("#zoomVal").textContent = Math.round(zoom.s * 100) + "%";
+    $("#zoomOut").disabled = zoom.s <= 1.001; $("#zoomIn").disabled = zoom.s >= ZMAX - 0.001;
+    if (aiS && aiS.brush !== "off") $("#brushCur").hidden = true;
+  }
+  function clampPan() {
+    const mx = Math.max(0, (zoom.s - 1) * wrapEl.offsetWidth / 2 + 40 * (zoom.s > 1)), my = Math.max(0, (zoom.s - 1) * wrapEl.offsetHeight / 2 + 40 * (zoom.s > 1));
+    zoom.tx = clamp(zoom.tx, -mx, mx); zoom.ty = clamp(zoom.ty, -my, my);
+    if (zoom.s <= 1.001) { zoom.s = 1; zoom.tx = 0; zoom.ty = 0; }
+  }
+  // perbesar/perkecil dengan titik (px,py) di layar tetap di tempatnya
+  function zoomAt(px, py, ns) {
+    ns = clamp(ns, 1, ZMAX);
+    const r = wrapEl.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - zoom.tx, cy = r.top + r.height / 2 - zoom.ty;
+    const k = ns / zoom.s;
+    zoom.tx = (px - cx) - k * (px - cx - zoom.tx);
+    zoom.ty = (py - cy) - k * (py - cy - zoom.ty);
+    zoom.s = ns; clampPan(); applyZoom();
+  }
+  function zoomCenter(f) { const r = wrapEl.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, zoom.s * f); }
+  function resetZoom() { zoom.s = 1; zoom.tx = 0; zoom.ty = 0; applyZoom(); }
+  window.__zoom = zoom;
+  $("#zoomIn").addEventListener("click", () => zoomCenter(1.5));
+  $("#zoomOut").addEventListener("click", () => zoomCenter(1 / 1.5));
+  $("#zoomVal").addEventListener("click", resetZoom);
+  // skala layar saat ini (ukuran tampil ÷ ukuran tata letak)
+  const zk = () => wrapEl.getBoundingClientRect().width / (wrapEl.offsetWidth || 1);
+  function localPt(e) {
+    const r = wrapEl.getBoundingClientRect(), k = r.width / (wrapEl.offsetWidth || 1);
+    return { x: (e.clientX - r.left) / k, y: (e.clientY - r.top) / k, k };
+  }
+  const ptrs = new Map();
+  let pinch = null, pan = null;
+  const zoomable = () => !!state.base && currentTab !== "kolase";
+  function startPan(e) { if (zoom.s <= 1.001) return; e.preventDefault(); pan = { sx: e.clientX, sy: e.clientY, tx: zoom.tx, ty: zoom.ty }; }
+  const stageEl = $("#stage");
+  stageEl.addEventListener("pointerdown", (e) => {
+    if (!zoomable()) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) {
+      // jari kedua: batalkan geser/kuas/potong yang sedang berjalan, mulai cubit
+      ldrag = null; drag = null; bdrag = null; pan = null;
+      const [a, b] = [...ptrs.values()];
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: zoom.s, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      e.stopPropagation(); e.preventDefault();
+    } else if (ptrs.size > 2) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  stageEl.addEventListener("pointerdown", (e) => {
+    if (zoomable() && !pinch && (e.target === stageEl)) startPan(e);
+  });
+  stageEl.addEventListener("pointermove", (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      zoom.tx += mx - pinch.mx; zoom.ty += my - pinch.my; pinch.mx = mx; pinch.my = my;
+      zoomAt(mx, my, pinch.s0 * d / pinch.d0);
+      e.stopPropagation(); e.preventDefault();
+    }
+  }, true);
+  const ptrEnd = (e) => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+  };
+  stageEl.addEventListener("pointerup", ptrEnd, true);
+  stageEl.addEventListener("pointercancel", ptrEnd, true);
+  window.addEventListener("pointermove", (e) => {
+    if (!pan) return;
+    zoom.tx = pan.tx + e.clientX - pan.sx; zoom.ty = pan.ty + e.clientY - pan.sy; clampPan(); applyZoom();
+  });
+  window.addEventListener("pointerup", () => { pan = null; });
+  window.addEventListener("pointercancel", () => { pan = null; });
+  stageEl.addEventListener("wheel", (e) => {
+    if (!zoomable()) return;
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, zoom.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+  }, { passive: false });
   // kotak foto (tanpa bingkai) dalam piksel layar
   function photoBox() {
     const wrap = $("#wrap"), s = wrap.clientWidth / view.width, g = geom || { x: 0, y: 0, w: view.width, h: view.height };
@@ -1058,10 +1188,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   let ldrag = null, lastTap = null;
   $("#wrap").addEventListener("pointerdown", (e) => {
     if (aiS && aiS.brush !== "off") { brushDown(e); return; }
-    if (cropping || e.target.closest("#selHandle")) return;
-    const r = $("#wrap").getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    if (cropping) { startPan(e); return; }
+    if (e.target.closest("#selHandle")) return;
+    const lp = localPt(e), px = lp.x, py = lp.y;
     const hits = hitTest(px, py);
-    if (!hits.length) { if (selId) { selId = null; syncLayerUI(); } lastTap = null; return; }
+    if (!hits.length) { if (selId) { selId = null; syncLayerUI(); } lastTap = null; startPan(e); return; }
     let L = hits[0];
     const cur = hits.findIndex((h) => h.id === selId);
     const again = lastTap && Date.now() - lastTap.t < 450 && Math.hypot(lastTap.x - px, lastTap.y - py) < 10;
@@ -1069,14 +1200,14 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     lastTap = { t: Date.now(), x: px, y: py };
     if (selId !== L.id) { selId = L.id; if (currentTab !== "teks") switchTab("teks"); else syncLayerUI(); }
     e.preventDefault();
-    const pb = photoBox();
-    ldrag = { mode: "move", sx: e.clientX, sy: e.clientY, W: pb.w, H: pb.h, x0: L.x, y0: L.y, moved: false };
+    const pb = photoBox(), k = lp.k;
+    ldrag = { mode: "move", sx: e.clientX, sy: e.clientY, W: pb.w * k, H: pb.h * k, x0: L.x, y0: L.y, moved: false };
   });
   $("#selHandle").addEventListener("pointerdown", (e) => {
     const L = getSel(); if (!L) return;
     e.preventDefault(); e.stopPropagation();
-    const r = $("#wrap").getBoundingClientRect(), pb = photoBox();
-    const cx = r.left + pb.x + L.x * pb.w, cy = r.top + pb.y + L.y * pb.h;
+    const r = $("#wrap").getBoundingClientRect(), pb = photoBox(), k = zk();
+    const cx = r.left + (pb.x + L.x * pb.w) * k, cy = r.top + (pb.y + L.y * pb.h) * k;
     ldrag = { mode: "xform", cx, cy, d0: Math.hypot(e.clientX - cx, e.clientY - cy) || 1, a0: Math.atan2(e.clientY - cy, e.clientX - cx), size0: L.size, rot0: L.rot, moved: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   });
@@ -1422,25 +1553,34 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 
   // =========================================================
   // TAB AI: HAPUS LATAR BELAKANG (berjalan di HP lewat ONNX Runtime Web)
-  // Model: U²-Net kecil (u2netp, Apache-2.0) dan Silueta (U²-Net ringkas).
+  // Model: Cepat = U²-Net kecil (u2netp, Apache-2.0). Detail = IS-Net (DIS, Apache-2.0),
+  // bobotnya disimpan setengah ukuran (float16) dan dipecah 10 file agar mudah diunggah.
   // =========================================================
   const ORT_VER = "1.17.3", ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
   const MODELS = {
-    cepat: { parts: ["u2netp.onnx"], size: 4574861 },
-    detail: { parts: ["silueta-1.bin", "silueta-2.bin", "silueta-3.bin", "silueta-4.bin", "silueta-5.bin"], size: 44173029 },
+    cepat: { parts: ["u2netp.onnx"], size: 4574861, in: 320, mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225] },
+    detail: { parts: Array.from({ length: 10 }, (_, i) => `isnet-${i + 1}.bin`), size: 90633486, in: 1024, mean: [0.5, 0.5, 0.5], std: [1, 1, 1] },
   };
-  const MODEL_CACHE = "rupa-model-v1", IN = 320, MASK_MAX = 1600;
+  const MODEL_CACHE = "rupa-model-v1", MASK_MAX = 1600;
+  const aiData = {};
+  let useGPU = false;
   let aiModel = "cepat", aiS = null, aiBusy = false;
   const aiSessions = {};
-  function loadORT() {
-    if (window.ort) return Promise.resolve(window.ort);
+  function addScript(file) {
     return new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = ORT_BASE + "ort.min.js"; s.async = true;
+      s.src = ORT_BASE + file; s.async = true;
       s.onload = () => (window.ort ? res(window.ort) : rej(new Error("ort")));
-      s.onerror = () => rej(new Error("ort"));
+      s.onerror = () => { s.remove(); rej(new Error("ort")); };
       document.head.appendChild(s);
     });
+  }
+  // pakai kartu grafis HP (WebGPU) bila tersedia agar jauh lebih cepat; kalau tidak, prosesor biasa (WASM)
+  async function loadORT() {
+    if (window.ort) return window.ort;
+    try { useGPU = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (e) { useGPU = false; }
+    if (useGPU) { try { return await addScript("ort.webgpu.min.js"); } catch (e) { useGPU = false; } }
+    return addScript("ort.min.js");
   }
   async function openCache() { try { return await caches.open(MODEL_CACHE); } catch (e) { return null; } }
   async function fetchModel(key, onProg) {
@@ -1469,47 +1609,64 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (ort.env && ort.env.wasm) { ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT_BASE; }
     const data = await fetchModel(key, onProg);
     onProg(1, "Menyalakan mesin AI…");
-    const sess = await ort.InferenceSession.create(data, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
-    aiSessions[key] = sess; markModels();
+    let sess = null;
+    if (useGPU) {
+      try { sess = await ort.InferenceSession.create(data, { executionProviders: ["webgpu"] }); sess.__gpu = true; aiData[key] = data; }
+      catch (e) { console.warn("WebGPU tidak bisa dipakai, pindah ke WASM", e); sess = null; }
+    }
+    if (!sess) sess = await ort.InferenceSession.create(data, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    aiSessions[key] = sess;
     return sess;
   }
-  // ubah foto jadi angka yang dimengerti model (320×320, dinormalisasi seperti saat model dilatih)
-  function preprocess(img) {
-    const c = document.createElement("canvas"); c.width = IN; c.height = IN;
+  // ubah foto jadi angka yang dimengerti model (ukuran & normalisasi sama seperti saat model dilatih)
+  function preprocess(img, m) {
+    const IN = m.in, c = document.createElement("canvas"); c.width = IN; c.height = IN;
     const x = c.getContext("2d", { willReadFrequently: true }); x.imageSmoothingQuality = "high";
     x.drawImage(img, 0, 0, IN, IN);
     const d = x.getImageData(0, 0, IN, IN).data, n = IN * IN;
     let mx = 1;
     for (let i = 0; i < d.length; i += 4) { if (d[i] > mx) mx = d[i]; if (d[i + 1] > mx) mx = d[i + 1]; if (d[i + 2] > mx) mx = d[i + 2]; }
-    const mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225], t = new Float32Array(3 * n);
+    const { mean, std } = m, t = new Float32Array(3 * n);
     for (let p = 0; p < n; p++) for (let ch = 0; ch < 3; ch++) t[ch * n + p] = (d[p * 4 + ch] / mx - mean[ch]) / std[ch];
     return t;
   }
   window.__preprocess = preprocess;
-  function postprocess(out) {
+  function postprocess(out, IN) {
     let mn = Infinity, mx = -Infinity;
-    for (let i = 0; i < out.length; i++) { const v = out[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    for (let i = 0; i < IN * IN; i++) { const v = out[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
     const r = mx - mn || 1, img = new ImageData(IN, IN);
     for (let i = 0; i < IN * IN; i++) img.data[i * 4 + 3] = ((out[i] - mn) / r) * 255;
     return img;
   }
   const mkCanvas = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
-  async function runAI() {
-    if (aiBusy) return;
+  const setModelBtns = (dis) => $("#models").querySelectorAll(".mbtn").forEach((b) => { b.disabled = dis; });
+  async function runAI(key) {
+    if (aiBusy || !state.base) return;
     if (inViewer) { toast("Fitur AI hanya jalan di Rupa versi hosting"); return; }
-    aiBusy = true; $("#aiRun").disabled = true; $("#aiProg").hidden = false;
+    aiModel = key || aiModel;
+    aiBusy = true; setModelBtns(true); $("#aiProg").hidden = false;
     const bar = $("#aiBar"), msg = $("#aiMsg");
     const prog = (f, t) => { bar.style.width = Math.round(f * 100) + "%"; msg.textContent = t || `Mengunduh model AI… ${Math.round(f * 100)}%`; };
     try {
       prog(0, aiSessions[aiModel] ? "Menyiapkan…" : "Memuat mesin AI…");
       const sess = await getAISession(aiModel, prog);
-      prog(1, "Memisahkan objek dari latar… (beberapa detik)");
-      await new Promise((r) => setTimeout(r, 60));
-      const orig = state.base, data = preprocess(orig);
-      const tensor = new window.ort.Tensor("float32", data, [1, 3, IN, IN]);
-      const res = await sess.run({ [sess.inputNames[0]]: tensor });
-      const small = postprocess(res[sess.outputNames[0]].data);
-      startAI(orig, small);
+      const m = MODELS[aiModel], IN = m.in;
+      prog(1, aiModel === "detail" ? "Memisahkan objek dengan teliti… (bisa 5–40 detik, jangan tutup aplikasi)" : "Memisahkan objek dari latar…");
+      await new Promise((r) => setTimeout(r, 80));
+      const orig = state.base, data = preprocess(orig, m);
+      const feeds = () => ({ [sess.inputNames[0]]: new window.ort.Tensor("float32", data, [1, 3, IN, IN]) });
+      let sess2 = sess, res;
+      try { res = await sess2.run(feeds()); }
+      catch (e) {
+        if (!sess2.__gpu || !aiData[aiModel]) throw e;
+        console.warn("WebGPU gagal, ulangi dengan WASM", e);
+        sess2 = await window.ort.InferenceSession.create(aiData[aiModel], { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+        aiSessions[aiModel] = sess2;
+        res = await sess2.run({ [sess2.inputNames[0]]: new window.ort.Tensor("float32", data, [1, 3, IN, IN]) });
+      }
+      aiData[aiModel] = null;
+      const small = postprocess(res[sess2.outputNames[0]].data, IN);
+      startAI(orig, small, IN);
       $("#aiProg").hidden = true;
       toast("Latar belakang terpisah. Rapikan bila perlu, lalu Terapkan.");
     } catch (err) {
@@ -1519,10 +1676,10 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       else if (m === "ort") toast("Mesin AI gagal dimuat. Periksa internetmu lalu coba lagi.");
       else toast("Gagal memproses foto. Coba lagi atau pakai model Cepat.");
       console.error(err);
-    } finally { aiBusy = false; $("#aiRun").disabled = false; }
+    } finally { aiBusy = false; setModelBtns(false); }
   }
   window.__runAI = runAI;
-  function startAI(orig, small) {
+  function startAI(orig, small, IN) {
     const s = Math.min(1, MASK_MAX / Math.max(orig.width, orig.height));
     const mw = Math.max(1, Math.round(orig.width * s)), mh = Math.max(1, Math.round(orig.height * s));
     const sm = mkCanvas(IN, IN); sm.getContext("2d").putImageData(small, 0, 0);
@@ -1609,12 +1766,12 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     ctx.globalCompositeOperation = "source-over";
   }
   function brushPoint(e) {
-    const r = $("#wrap").getBoundingClientRect(), pb = photoBox();
-    const sx = e.clientX - r.left, sy = e.clientY - r.top;
+    const lp = localPt(e), pb = photoBox(), sx = lp.x, sy = lp.y;
+    const size = aiS.bsize / lp.k; // ukuran kuas tetap sama di layar walau diperbesar
     const cur = $("#brushCur");
-    cur.hidden = false; cur.style.width = cur.style.height = aiS.bsize + "px";
-    cur.style.transform = `translate(${sx - aiS.bsize / 2}px, ${sy - aiS.bsize / 2}px)`;
-    return { x: (sx - pb.x) / pb.w * aiS.mw, y: (sy - pb.y) / pb.h * aiS.mh, r: aiS.bsize / 2 / pb.w * aiS.mw };
+    cur.hidden = false; cur.style.width = cur.style.height = size + "px";
+    cur.style.transform = `translate(${sx - size / 2}px, ${sy - size / 2}px)`;
+    return { x: (sx - pb.x) / pb.w * aiS.mw, y: (sy - pb.y) / pb.h * aiS.mh, r: size / 2 / pb.w * aiS.mw };
   }
   function paint(a, b) {
     const on = aiS.brush === "restore" ? aiS.add : aiS.erase, off = aiS.brush === "restore" ? aiS.erase : aiS.add;
@@ -1644,10 +1801,9 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 
   // kontrol panel AI
   $("#models").addEventListener("click", (e) => {
-    const b = e.target.closest(".mcard"); if (!b || aiBusy) return;
-    aiModel = b.dataset.m; syncAIUI();
+    const b = e.target.closest(".mbtn"); if (!b || aiBusy) return;
+    runAI(b.dataset.m);
   });
-  $("#aiRun").addEventListener("click", runAI);
   $("#aiApply").addEventListener("click", () => applyAI(false));
   $("#aiCancel").addEventListener("click", cancelAI);
   $("#bgModes").addEventListener("click", (e) => {
@@ -1663,19 +1819,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   $("#bSize").addEventListener("input", (e) => { if (!aiS) return; aiS.bsize = +e.target.value; $("#bSizeVal").textContent = e.target.value; });
   $("#aiFeather").addEventListener("input", (e) => { if (!aiS) return; aiS.feather = +e.target.value; $("#aiFeatherVal").textContent = e.target.value; aiPreview(); });
   $("#aiHard").addEventListener("input", (e) => { if (!aiS) return; aiS.hard = +e.target.value; $("#aiHardVal").textContent = e.target.value; rebuildBase(); rebuildMask(); });
-  async function markModels() {
-    const cache = await openCache();
-    for (const k in MODELS) {
-      const el = $("#st-" + k); let ok = !!aiSessions[k];
-      if (!ok && cache) { try { ok = (await Promise.all(MODELS[k].parts.map((p) => cache.match(p)))).every(Boolean); } catch (e) {} }
-      el.textContent = aiSessions[k] ? "Siap dipakai" : ok ? "Tersimpan di HP" : "Belum diunduh";
-      el.classList.toggle("ok", ok);
-    }
-  }
+  // bersihkan model lama (versi sebelumnya) dari penyimpanan HP
+  openCache().then((c) => c && c.keys().then((ks) => ks.forEach((r) => { if (/silueta-/.test(r.url)) c.delete(r); }))).catch(() => {});
   function syncAIUI() {
     $("#aiViewerNote").hidden = !inViewer;
-    $("#models").querySelectorAll(".mcard").forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === aiModel));
-    $("#aiRunRow").hidden = !!aiS; $("#models").hidden = !!aiS;
+    $("#models").hidden = !!aiS;
     $("#aiEdit").hidden = !aiS;
     if (aiS) {
       $("#bgModes").querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", b.dataset.b === aiS.bg));
@@ -1687,7 +1835,6 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       $("#aiFeather").value = aiS.feather; $("#aiFeatherVal").textContent = aiS.feather;
       $("#aiHard").value = aiS.hard; $("#aiHardVal").textContent = aiS.hard;
     }
-    markModels();
   }
 
   // =========================================================
@@ -1718,6 +1865,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
       fileName = (f.name || "foto").replace(/\.[^.]+$/, "") || "foto";
       col.cells[0] = newCell(c);
+      $("#welcome").hidden = true;
       toast("Foto dibuka");
     }, () => toast("Foto tidak bisa dibuka. Format HEIC dari iPhone belum didukung, coba JPG atau PNG."));
   }
@@ -1799,6 +1947,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   let currentTab = "atur";
   const PANES = ["atur", "filter", "potong", "teks", "bingkai", "kolase", "ai", "simpan"];
   function switchTab(name) {
+    if (!state.base && name !== "kolase") { toast("Buka foto atau pakai kolase dulu"); return; }
     if (aiS && name !== "ai") applyAI(true);
     currentTab = name;
     document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", x.dataset.tab === name));
@@ -1807,7 +1956,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (name === "ai") syncAIUI();
     const isCol = name === "kolase";
     $("#wrap").hidden = isCol; colView.hidden = !isCol; $("#colHint").hidden = !isCol;
-    $("#sampleChip").hidden = !state.isSample || isCol;
+    $("#zoomBar").hidden = isCol;
+    if (isCol) resetZoom();
     cmp.hidden = name === "potong" || isCol;
     setCropMode(name === "potong");
     if (isCol) {
@@ -1830,38 +1980,20 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   });
 
   // =========================================================
-  // CONTOH FOTO BAWAAN
+  // LAYAR AWAL: pilih foto atau buat kolase dulu
   // =========================================================
-  function sampleScene() {
-    const W = 1600, H = 1200, c = document.createElement("canvas"); c.width = W; c.height = H;
-    const x = c.getContext("2d");
-    const sky = x.createLinearGradient(0, 0, 0, H * 0.62);
-    sky.addColorStop(0, "#2B3A67"); sky.addColorStop(0.55, "#C9787A"); sky.addColorStop(1, "#F2B880");
-    x.fillStyle = sky; x.fillRect(0, 0, W, H);
-    const sun = x.createRadialGradient(W * 0.62, H * 0.5, 10, W * 0.62, H * 0.5, 260);
-    sun.addColorStop(0, "rgba(255,240,200,1)"); sun.addColorStop(0.18, "rgba(255,214,150,.95)"); sun.addColorStop(1, "rgba(255,190,120,0)");
-    x.fillStyle = sun; x.fillRect(0, 0, W, H);
-    const ridge = (base, amp, seed, color) => {
-      x.beginPath(); x.moveTo(0, H);
-      for (let i = 0; i <= W; i += 8) x.lineTo(i, base - amp * (0.55 * Math.sin(i / 210 + seed) + 0.3 * Math.sin(i / 83 + seed * 2) + 0.15 * Math.sin(i / 31 + seed * 3)));
-      x.lineTo(W, H); x.closePath(); x.fillStyle = color; x.fill();
-    };
-    ridge(H * 0.56, 90, 1.3, "#6B5672"); ridge(H * 0.6, 70, 4.1, "#4A3E5C");
-    const lake = x.createLinearGradient(0, H * 0.62, 0, H);
-    lake.addColorStop(0, "#C98A80"); lake.addColorStop(1, "#2A3050");
-    x.fillStyle = lake; x.fillRect(0, H * 0.62, W, H);
-    x.fillStyle = "rgba(255,226,170,.55)";
-    for (let i = 0; i < 26; i++) { const ww = 220 - i * 6; x.fillRect(W * 0.62 - ww / 2 + Math.sin(i) * 20, H * 0.64 + i * 14, ww, 3); }
-    ridge(H * 0.98, 60, 2.2, "#1E1B2B");
-    const img = x.getImageData(0, 0, W, H), d = img.data;
-    for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 14; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
-    x.putImageData(img, 0, 0);
-    return c;
-  }
-
-  state.base = sampleScene();
-  fileName = "contoh";
-  buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
+  $("#wFile").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) loadFile(f); });
+  $("#wCol").addEventListener("change", (e) => {
+    const files = [...e.target.files].filter((f) => !f.type || f.type.startsWith("image/")); e.target.value = "";
+    if (!files.length) return;
+    const n = files.length;
+    col.layout = n <= 2 ? "2v" : n === 3 ? "3a" : n === 4 ? "4g" : n === 5 ? "5a" : n === 6 ? "6g" : "9g";
+    col.cells = []; col.sel = -1;
+    $("#welcome").hidden = true;
+    switchTab("kolase");
+    loadIntoCells(files, null);
+  });
+  syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); applyZoom();
   window.__state = state;
   // mode aplikasi (PWA): hanya aktif saat Rupa di-hosting sendiri
   if (!inViewer && "serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {

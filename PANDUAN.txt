@@ -6,7 +6,7 @@ Isi folder ini (semua harus diunggah, jangan ada yang tertinggal):
   sw.js                  penyimpan offline
   icon-192.png, icon-512.png, icon-maskable-512.png   ikon aplikasi
   u2netp.onnx            model AI "Cepat" (4,6 MB)
-  silueta-1.bin s/d silueta-5.bin   model AI "Detail" (44 MB, dipecah lima agar bisa diunggah dari HP)
+  isnet-1.bin s/d isnet-10.bin   model AI "Detail" (91 MB, dipecah sepuluh agar bisa diunggah dari HP)
   PANDUAN.txt            file ini (tidak wajib diunggah)
 
 LANGKAH 1 — Buat akun dan tempat penyimpanan
@@ -20,9 +20,10 @@ LANGKAH 2 — Unggah file
   2. Di halaman repository, tekan "Add file" → "Upload files".
      Kalau tombolnya tidak muncul, buka menu Chrome ⋮ → centang "Situs desktop".
   3. Unggah bertahap, 3 kali, supaya tidak gagal karena terlalu besar:
-       Unggahan 1: semua file KECUALI silueta-*.bin → Commit changes
-       Unggahan 2: silueta-1.bin, silueta-2.bin → Commit changes
-       Unggahan 3: silueta-3.bin, silueta-4.bin, silueta-5.bin → Commit changes
+       Unggahan 1: semua file KECUALI isnet-*.bin → Commit changes
+       Unggahan 2: isnet-1.bin, isnet-2.bin, isnet-3.bin → Commit changes
+       Unggahan 3: isnet-4.bin, isnet-5.bin, isnet-6.bin → Commit changes
+       Unggahan 4: isnet-7.bin, isnet-8.bin, isnet-9.bin, isnet-10.bin (kalau gagal, bagi dua) → Commit changes
 
 LANGKAH 3 — Nyalakan GitHub Pages
   1. Buka tab "Settings" → menu "Pages".
@@ -41,5 +42,5 @@ CATATAN
     Setelah itu fitur AI tetap jalan walau sedang offline.
   - Untuk memperbarui Rupa nanti: unggah ulang index.html yang baru ke repository yang sama.
     Aplikasi di HP otomatis mengambil versi terbaru saat dibuka dengan internet.
-  - Model AI: u2netp (U²-Net, lisensi Apache-2.0) dan Silueta (versi ringkas U²-Net dari proyek rembg).
-    Sebelum Rupa dijual atau dipasang di Play Store, cek ulang lisensi model Silueta.
+  - Model AI: u2netp (U²-Net) dan IS-Net general-use (DIS), keduanya lisensi Apache-2.0.
+    Bobot IS-Net disimpan dalam float16 (setengah ukuran, hasil praktis sama).

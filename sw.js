@@ -1,5 +1,5 @@
 // Rupa: penyimpan offline. Naikkan VERSI setiap kali file aplikasi diperbarui.
-const VERSI = "rupa-app-v1";
+const VERSI = "rupa-app-v2";
 const INTI = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 const LUAR = "rupa-luar-v1"; // font Google dan mesin AI dari CDN
 
