@@ -199,6 +199,18 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 .wbtn small{display:block;font-size:13px;opacity:.75;margin-top:2px}
 .wbtn:focus-within{outline:2px solid var(--fg);outline-offset:3px}
 .wfoot{margin:0;font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+.wresume{display:flex;align-items:center;gap:14px;padding:12px;border-radius:16px;border:1px solid var(--accent);background:var(--panel);text-align:left;width:100%}
+.wresume canvas{width:56px;height:56px;border-radius:10px;flex:none;background:var(--bg)}
+.wresume b{display:block;font-size:17px}
+.wresume small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.wresume .go{margin-left:auto;font-size:22px;color:var(--accent)}
+.homebtn{margin-right:-2px}
+.dlg{position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.dlgbox{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;margin-bottom:env(safe-area-inset-bottom,0px)}
+.dlgbox h3{margin:0;font-family:var(--f-display);font-size:19px}
+.dlgbox p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.dlgbox .actions{margin-top:6px}
+.dlgbox .btn{flex:1}
 .mcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px;border-radius:12px;border:1px solid var(--line);background:transparent;text-align:left;min-width:0}
 .mcard b{font-size:15px}
 .mcard span{font-size:12px;color:var(--muted)}
@@ -210,7 +222,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 .note{font-size:13px;line-height:1.45;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);background:var(--bg);margin:0}
 @media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{opacity:0;transform:translate(-50%,-8px)}}}
 @media (max-width:440px){.openbtn .lbl{display:none}.openbtn{padding:0 11px}}
-@media (max-width:400px){.top{gap:6px}.row{grid-template-columns:84px minmax(0,1fr) 40px}.brand small{display:none}.tab{font-size:10.5px}}
+@media (max-width:400px){.top{gap:5px}.brand{font-size:18px}.row{grid-template-columns:84px minmax(0,1fr) 40px}.brand small{display:none}.tab{font-size:10.5px}}
 </style>
 </head>
 <body>
@@ -219,6 +231,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   <div class="wcontent">
     <div class="wmark"><span class="wlogo">R</span>Rupa</div>
     <h1 class="wtitle">Mau edit foto <em>apa</em> hari ini?</h1>
+    <button class="wresume" id="wResume" hidden>
+      <canvas id="wThumb" width="112" height="112"></canvas>
+      <span><b>Lanjutkan edit</b><small>Foto yang sedang kamu edit</small></span>
+      <span class="go">›</span>
+    </button>
     <div class="wbtns">
       <label class="wbtn primary" for="wFile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
@@ -237,6 +254,9 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 
 <div class="app">
   <header class="top">
+    <button class="iconbtn homebtn" id="homeBtn" aria-label="Kembali ke menu awal" title="Kembali ke menu awal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
     <div class="brand">Rupa <small id="dims">—</small></div>
     <div class="zoombar" id="zoomBar">
       <button id="zoomOut" aria-label="Perkecil">−</button>
@@ -480,6 +500,13 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   </nav>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="dlg" id="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <div class="dlgbox">
+    <h3 id="dlgTitle"></h3>
+    <p id="dlgText"></p>
+    <div class="actions"><button class="btn" id="dlgNo">Batal</button><button class="btn primary" id="dlgYes">Ya</button></div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -2112,17 +2139,17 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (!f) { toast("Tidak ada foto yang dipilih"); return; }
     if (f.type && !f.type.startsWith("image/")) { toast("File ini bukan gambar. Pilih JPG, PNG, atau WebP."); return; }
     decodeImage(f, 0, (c) => {
-      if (currentTab === "kolase") switchTab("atur");
       state.base = c; state.adj = zeroAdj(); state.filter = { id: "none", amt: 100 }; state.layers = []; state.isSample = false;
+      if (currentTab !== "atur") switchTab("atur");
       selId = null; past = []; future = [];
       buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
       fileName = (f.name || "foto").replace(/\.[^.]+$/, "") || "foto";
       col.cells[0] = newCell(c);
-      $("#welcome").hidden = true;
+      showEditor();
       toast("Foto dibuka");
     }, () => toast("Foto tidak bisa dibuka. Format HEIC dari iPhone belum didukung, coba JPG atau PNG."));
   }
-  $("#file").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
+  $("#file").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) confirmReplace(() => loadFile(f)); });
   const stage = $("#stage");
   stage.addEventListener("dragover", (e) => { e.preventDefault(); $("#drop").hidden = false; });
   stage.addEventListener("dragleave", (e) => { if (!stage.contains(e.relatedTarget)) $("#drop").hidden = true; });
@@ -2235,17 +2262,78 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   // =========================================================
   // LAYAR AWAL: pilih foto atau buat kolase dulu
   // =========================================================
-  $("#wFile").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) loadFile(f); });
+  $("#wFile").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) confirmReplace(() => loadFile(f)); });
   $("#wCol").addEventListener("change", (e) => {
     const files = [...e.target.files].filter((f) => !f.type || f.type.startsWith("image/")); e.target.value = "";
     if (!files.length) return;
-    const n = files.length;
-    col.layout = n <= 2 ? "2v" : n === 3 ? "3a" : n === 4 ? "4g" : n === 5 ? "5a" : n === 6 ? "6g" : "9g";
-    col.cells = []; col.sel = -1;
-    $("#welcome").hidden = true;
-    switchTab("kolase");
-    loadIntoCells(files, null);
+    confirmReplace(() => {
+      const n = files.length;
+      col.layout = n <= 2 ? "2v" : n === 3 ? "3a" : n === 4 ? "4g" : n === 5 ? "5a" : n === 6 ? "6g" : "9g";
+      col.cells = []; col.sel = -1;
+      if (aiS) endAI();
+      state.base = null; state.layers = []; selId = null; past = []; future = []; previewSrc = null; updateHistoryBtns();
+      showEditor();
+      switchTab("kolase");
+      loadIntoCells(files, null);
+    });
   });
+
+  // =========================================================
+  // NAVIGASI: kembali ke menu awal tanpa menutup aplikasi
+  // Editor dicatat di riwayat browser, jadi tombol/gerakan "kembali" HP membuka menu awal.
+  // Hasil edit tetap tersimpan sementara selama aplikasi belum ditutup → kartu "Lanjutkan edit".
+  // =========================================================
+  const inEditor = () => $("#welcome").hidden;
+  const hasWork = () => !!state.base || col.cells.some((c) => c && c.img);
+  function showEditor() {
+    $("#welcome").hidden = true;
+    if (!history.state || history.state.rupa !== "editor") { try { history.pushState({ rupa: "editor" }, ""); } catch (e) {} }
+    requestAnimationFrame(() => { fitView(); if (currentTab === "kolase") fitCollage(); });
+  }
+  function showWelcome() {
+    if (aiS) applyAI(true);
+    selId = null; syncLayerUI();
+    const can = hasWork();
+    $("#wResume").hidden = !can;
+    if (can) {
+      const t = $("#wThumb"), x = t.getContext("2d"), src = state.base ? view : colView;
+      x.fillStyle = "#141416"; x.fillRect(0, 0, t.width, t.height);
+      const s = Math.min(t.width / src.width, t.height / src.height), w = src.width * s, h = src.height * s;
+      x.drawImage(src, (t.width - w) / 2, (t.height - h) / 2, w, h);
+    }
+    $("#welcome").hidden = false; $("#toast").hidden = true;
+    hideDlg();
+  }
+  window.__nav = { showWelcome, showEditor, inEditor };
+  // tombol kembali di aplikasi: pakai riwayat browser supaya tombol back HP tetap sinkron
+  $("#homeBtn").addEventListener("click", () => {
+    if (history.state && history.state.rupa === "editor") history.back(); else showWelcome();
+  });
+  window.addEventListener("popstate", () => {
+    if (!$("#dlg").hidden) { hideDlg(); if (inEditor()) { try { history.pushState({ rupa: "editor" }, ""); } catch (e) {} } return; }
+    if (inEditor()) showWelcome();
+  });
+  $("#wResume").addEventListener("click", () => {
+    showEditor();
+    if (!state.base) switchTab("kolase");
+  });
+  // dialog konfirmasi buatan sendiri (dialog bawaan browser tidak selalu muncul)
+  let dlgYes = null;
+  function askDlg(title, text, yesLabel, onYes) {
+    $("#dlgTitle").textContent = title; $("#dlgText").textContent = text; $("#dlgYes").textContent = yesLabel;
+    dlgYes = onYes; $("#dlg").hidden = false; $("#dlgNo").focus();
+  }
+  function hideDlg() { $("#dlg").hidden = true; dlgYes = null; }
+  $("#dlgNo").addEventListener("click", hideDlg);
+  $("#dlg").addEventListener("click", (e) => { if (e.target.id === "dlg") hideDlg(); });
+  $("#dlgYes").addEventListener("click", () => { const f = dlgYes; hideDlg(); if (f) f(); });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#dlg").hidden) hideDlg(); });
+  // membuka foto/kolase baru saat masih ada hasil edit → tanya dulu
+  function confirmReplace(go) {
+    if (!hasWork()) { go(); return; }
+    askDlg("Mulai edit baru?", "Hasil edit yang sekarang akan diganti dan tidak bisa dikembalikan.", "Mulai baru", go);
+  }
+  window.__askDlg = askDlg;
   syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); applyZoom();
   window.__state = state;
   // mode aplikasi (PWA): hanya aktif saat Rupa di-hosting sendiri
