@@ -13,7 +13,7 @@ Tidak ada di zip ini (sudah ada di GitHub-mu, jangan dihapus):
 
 Diunduh otomatis dari Hugging Face saat pertama dipakai (tidak perlu diunggah):
   model "Orang"   (ORMBG, 84 MB)
-  model "Terbaik" (BiRefNet-lite, 115 MB, hanya muncul di HP yang mendukung kartu grafis/WebGPU)
+  AI "Ketuk objek" (SlimSAM, ±14 MB)
 
 CARA UPDATE
   1. Ekstrak zip ini di HP.
@@ -25,6 +25,6 @@ CARA UPDATE
 
 CATATAN
   - Setiap model AI diunduh sekali saat pertama dipakai, lalu tersimpan di HP dan bisa dipakai offline.
-    Pakai WiFi saat pertama mencoba Orang dan Terbaik.
-  - Lisensi model: u2netp & IS-Net (Apache-2.0), ORMBG (Apache-2.0), BiRefNet-lite (MIT).
+    Pakai WiFi saat pertama mencoba Orang dan Ketuk objek.
+  - Lisensi model: u2netp & IS-Net (Apache-2.0), ORMBG (Apache-2.0), SlimSAM (Apache-2.0).
     Sebagian data latihnya (misalnya DIS5K, P3M-10K) hanya untuk riset; cek ulang sebelum Rupa dimonetisasi.

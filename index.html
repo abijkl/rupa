@@ -57,12 +57,15 @@ a{color:var(--accent)}
 #view{width:100%;height:100%;display:block;background:repeating-conic-gradient(#3B3B42 0% 25%, #26262B 0% 50%) 50%/18px 18px}
 #colView{display:block;box-shadow:0 10px 40px rgba(0,0,0,.5);touch-action:none;max-width:100%}
 .clip{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.zoombar{position:absolute;left:16px;top:14px;display:flex;align-items:center;height:34px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.85);overflow:hidden}
-.zoombar button{height:100%;min-width:36px;padding:0 10px;border:0;background:transparent;font-size:17px;line-height:1}
+.zoombar{display:flex;align-items:center;height:40px;border-radius:10px;border:1px solid var(--line);overflow:hidden;flex:none}
+.zoombar button{height:100%;min-width:32px;padding:0 6px;border:0;background:transparent;font-size:18px;line-height:1}
 .zoombar button:disabled{opacity:.35;cursor:default}
-.zoombar #zoomVal{font-family:var(--f-mono);font-size:12px;min-width:54px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
-.compare{position:absolute;right:16px;top:14px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.85);font-size:13px;user-select:none;-webkit-user-select:none;touch-action:none}
+.zoombar #zoomVal{font-family:var(--f-mono);font-size:11px;min-width:44px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.compare{position:absolute;right:10px;top:50%;transform:translateY(-50%);height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,22,.8);font-size:12px;font-weight:600;letter-spacing:.02em;user-select:none;-webkit-user-select:none;touch-action:none;z-index:2}
 .compare.on{background:var(--fg);color:var(--bg)}
+.pts{position:absolute;inset:0;pointer-events:none}
+.pt{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.6);transform:scale(var(--inv,1))}
+.pt.add{background:#2FB67C}.pt.cut{background:#E8524A}
 .drop{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:14px;display:grid;place-items:center;background:rgba(13,13,15,.8);font-weight:600}
 .stagehint{position:absolute;left:16px;right:16px;bottom:16px;text-align:center;font-size:12.5px;color:var(--muted)}
 
@@ -206,7 +209,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 .progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 .note{font-size:13px;line-height:1.45;border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg);background:var(--bg);margin:0}
 @media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{opacity:0;transform:translate(-50%,-8px)}}}
-@media (max-width:400px){.top{gap:6px}.openbtn{padding:0 12px}.row{grid-template-columns:84px minmax(0,1fr) 40px}.brand small{display:none}.tab{font-size:10.5px}}
+@media (max-width:440px){.openbtn .lbl{display:none}.openbtn{padding:0 11px}}
+@media (max-width:400px){.top{gap:6px}.row{grid-template-columns:84px minmax(0,1fr) 40px}.brand small{display:none}.tab{font-size:10.5px}}
 </style>
 </head>
 <body>
@@ -234,15 +238,20 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 <div class="app">
   <header class="top">
     <div class="brand">Rupa <small id="dims">—</small></div>
+    <div class="zoombar" id="zoomBar">
+      <button id="zoomOut" aria-label="Perkecil">−</button>
+      <button id="zoomVal" aria-label="Kembali ke ukuran layar">100%</button>
+      <button id="zoomIn" aria-label="Perbesar">+</button>
+    </div>
     <button class="iconbtn" id="undo" aria-label="Urungkan" title="Urungkan" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
     </button>
     <button class="iconbtn" id="redo" aria-label="Ulangi" title="Ulangi" disabled>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg>
     </button>
-    <label class="openbtn" id="openBtn" for="file">
+    <label class="openbtn" id="openBtn" for="file" aria-label="Buka foto">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
-      Buka foto
+      <span class="lbl">Buka foto</span>
       <input type="file" id="file" accept="image/*" class="filein">
     </label>
   </header>
@@ -254,6 +263,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
         <div class="crop" id="crop" hidden><span class="cropsize" id="cropSize"></span><div class="handle nw" data-h="nw"></div><div class="handle ne" data-h="ne"></div><div class="handle sw" data-h="sw"></div><div class="handle se" data-h="se"></div></div>
       </div>
       <div class="brushcur" id="brushCur" hidden></div>
+      <div class="pts" id="pts"></div>
       <div class="sel" id="sel" hidden>
         <div class="selh" id="selHandle" aria-label="Putar dan ubah ukuran">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
@@ -261,12 +271,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       </div>
     </div>
     <canvas id="colView" hidden></canvas>
-    <div class="zoombar" id="zoomBar">
-      <button id="zoomOut" aria-label="Perkecil">−</button>
-      <button id="zoomVal" aria-label="Kembali ke ukuran layar">100%</button>
-      <button id="zoomIn" aria-label="Perbesar">+</button>
-    </div>
-    <button class="compare" id="compare" aria-label="Tahan untuk melihat foto asli">Tahan: asli</button>
+    <button class="compare" id="compare" aria-label="Tahan untuk melihat foto asli">Asli</button>
     <p class="stagehint" id="colHint" hidden>Ketuk kotak kosong untuk memilih foto. Geser foto di dalam kotak untuk mengatur posisinya.</p>
     <div class="seltools" id="selTools" hidden>
       <button id="layDel" class="del">Hapus</button>
@@ -415,7 +420,6 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
         <button class="mbtn primary" data-m="cepat">Cepat</button>
         <button class="mbtn" data-m="detail">Detail</button>
         <button class="mbtn" data-m="orang">Orang</button>
-        <button class="mbtn" data-m="terbaik" hidden>Terbaik</button>
       </div>
       <div class="pane" id="aiProg" hidden><div class="progress"><i id="aiBar"></i></div><p class="hint" id="aiMsg">Menyiapkan…</p></div>
       <div class="pane" id="aiEdit" hidden>
@@ -427,6 +431,14 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
         </div>
         <div class="swatches" id="bgSw" hidden></div>
         <div class="row" id="bgBlurRow" hidden><label for="bgBlur">Kekuatan</label><input type="range" id="bgBlur" min="2" max="40" value="12"><span class="val" id="bgBlurVal">12</span></div>
+        <div class="sub">Ketuk objek</div>
+        <div class="seg" id="tapMode">
+          <button data-t="off" aria-pressed="true">Mati</button>
+          <button data-t="add" aria-pressed="false">✅ Objek</button>
+          <button data-t="cut" aria-pressed="false">❌ Bukan</button>
+        </div>
+        <div class="actions" id="tapActs" hidden><button class="btn" id="tapUndo">Batalkan titik</button><button class="btn" id="tapClear">Hapus semua</button></div>
+        <p class="hint" id="tapMsg" hidden></p>
         <div class="sub">Rapikan dengan kuas</div>
         <div class="seg" id="brushMode">
           <button data-b="off" aria-pressed="true">Mati</button>
@@ -788,6 +800,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (cropping) drawCropBox();
     clampPan(); applyZoom();
     updateSelBox();
+    if (typeof drawPts === "function" && aiS) drawPts();
     if (currentTab === "kolase") fitCollage();
   }
   new ResizeObserver(fitView).observe($("#stage"));
@@ -841,7 +854,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 2) {
       // jari kedua: batalkan geser/kuas/potong yang sedang berjalan, mulai cubit
-      ldrag = null; drag = null; bdrag = null; pan = null;
+      ldrag = null; drag = null; bdrag = null; pan = null; tapStart = null;
       const [a, b] = [...ptrs.values()];
       pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: zoom.s, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       e.stopPropagation(); e.preventDefault();
@@ -1190,6 +1203,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   }
   let ldrag = null, lastTap = null;
   $("#wrap").addEventListener("pointerdown", (e) => {
+    if (aiS && aiS.tap !== "off") { tapDown(e); return; }
     if (aiS && aiS.brush !== "off") { brushDown(e); return; }
     if (cropping) { startPan(e); return; }
     if (e.target.closest("#selHandle")) return;
@@ -1559,7 +1573,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   // Cepat   = U²-Net kecil (u2netp)                 · 4,6 MB · ada di hosting sendiri
   // Detail  = IS-Net general-use (float16)          · 91 MB  · ada di hosting sendiri
   // Orang   = ORMBG, IS-Net khusus foto manusia     · 84 MB  · diunduh dari Hugging Face
-  // Terbaik = BiRefNet-lite versi WebGPU            · 115 MB · diunduh dari Hugging Face, perlu kartu grafis
+  // Ketuk objek = SlimSAM (Segment Anything versi ringkas, Apache-2.0) · ±14 MB · diunduh dari Hugging Face
+  // Semua dijalankan di prosesor (WASM) supaya hasilnya stabil di semua HP.
   // =========================================================
   const ORT_VER = "1.20.1", ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
   const HF = "https://huggingface.co/";
@@ -1568,22 +1583,11 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     cepat: { label: "Cepat", parts: ["u2netp.onnx"], size: 4574861, in: 320, scale: "max", ...IMGNET, out: "minmax" },
     detail: { label: "Detail", parts: Array.from({ length: 10 }, (_, i) => `isnet-${i + 1}.bin`), size: 90633486, in: 1024, scale: "max", mean: [0.5, 0.5, 0.5], std: [1, 1, 1], out: "minmax", twoPass: true },
     orang: { label: "Orang", parts: [HF + "d30social/ormbg-ortweb/resolve/b66cbea6744d43dc4177649ec21000d9da71d142/onnx/model_fp16.onnx"], size: 84e6, in: 1024, scale: 255, mean: [0, 0, 0], std: [1, 1, 1], out: "minmax", twoPass: true },
-    terbaik: { label: "Terbaik", parts: [HF + "jiabins0303/birefnet-lite-1024-webgpu/resolve/dc4edd9f7623961aa5ae2b186c1b428f4ed38d6a/onnx/model_fp16.onnx"], size: 115e6, in: 1024, scale: 255, ...IMGNET, out: "sigmoid", twoPass: true, gpuOnly: true },
   };
   window.__MODELS = MODELS;
   const MODEL_CACHE = "rupa-model-v1", MASK_MAX = 1600;
-  let aiModel = "cepat", aiS = null, aiBusy = false, useGPU = false, gpuOK = null;
-  const aiSessions = {}, aiData = {};
-  // cek sekali: apakah kartu grafis HP bisa dipakai (WebGPU), termasuk syarat model Terbaik
-  async function checkGPU() {
-    if (gpuOK !== null) return gpuOK;
-    try {
-      const ad = navigator.gpu && await navigator.gpu.requestAdapter();
-      gpuOK = !!ad; useGPU = gpuOK;
-      MODELS.terbaik.ok = !!ad && (ad.limits ? ad.limits.maxStorageBuffersPerShaderStage >= 8 : false);
-    } catch (e) { gpuOK = false; useGPU = false; MODELS.terbaik.ok = false; }
-    return gpuOK;
-  }
+  let aiModel = "cepat", aiS = null, aiBusy = false;
+  const aiSessions = {};
   function addScript(file) {
     return new Promise((res, rej) => {
       const s = document.createElement("script");
@@ -1595,18 +1599,16 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   }
   async function loadORT() {
     if (window.ort) return window.ort;
-    await checkGPU();
-    let ort = null;
-    if (useGPU) { try { ort = await addScript("ort.webgpu.min.js"); } catch (e) { useGPU = false; } }
-    if (!ort) ort = await addScript("ort.wasm.min.js");
+    const ort = await addScript("ort.wasm.min.js");
     if (ort.env && ort.env.wasm) { ort.env.wasm.numThreads = 1; ort.env.wasm.wasmPaths = ORT_BASE; }
     return ort;
   }
   async function openCache() { try { return await caches.open(MODEL_CACHE); } catch (e) { return null; } }
-  async function fetchModel(key, onProg) {
-    const m = MODELS[key], cache = await openCache(), chunks = [];
-    let loaded = 0, total = m.size;
-    for (const part of m.parts) {
+  async function fetchModel(key, onProg) { const m = MODELS[key]; return fetchParts(m.parts, m.size, onProg); }
+  async function fetchParts(parts, size, onProg) {
+    const cache = await openCache(), chunks = [], m = { parts };
+    let loaded = 0, total = size;
+    for (const part of parts) {
       let resp = null;
       if (cache) { try { resp = await cache.match(part); } catch (e) {} }
       if (!resp) {
@@ -1638,27 +1640,16 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     return n;
   }
   window.__patchCeilMode = patchCeilMode;
-  async function createSession(key, data, gpu) {
-    const ort = window.ort;
-    const s = await ort.InferenceSession.create(data, gpu ? { executionProviders: ["webgpu"] } : { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
-    s.__gpu = !!gpu; return s;
+  async function createSession(data) {
+    return window.ort.InferenceSession.create(data, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
   }
   async function getAISession(key, onProg) {
     if (aiSessions[key]) return aiSessions[key];
-    const m = MODELS[key];
     await loadORT();
-    if (m.gpuOnly && !(useGPU && m.ok)) throw new Error("gpu-only");
     const data = await fetchModel(key, onProg);
     patchCeilMode(data);
     onProg(1, "Menyalakan mesin AI…");
-    let sess = null;
-    if (useGPU) {
-      try { sess = await createSession(key, data, true); if (!m.gpuOnly) aiData[key] = data; }
-      catch (e) { console.warn("Kartu grafis tidak bisa dipakai untuk model ini", e); if (m.gpuOnly) throw new Error("gpu-only"); }
-    }
-    if (!sess) sess = await createSession(key, data, false);
-    aiSessions[key] = sess;
-    return sess;
+    return (aiSessions[key] = await createSession(data));
   }
   // float32 → float16 (untuk model yang meminta masukan setengah presisi)
   const f32 = new Float32Array(1), u32 = new Uint32Array(f32.buffer);
@@ -1685,18 +1676,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (t.type === "float16") { const o = new Float32Array(d.length); for (let i = 0; i < d.length; i++) o[i] = fromHalf(d[i]); d = o; }
     return d;
   }
-  // jalankan model; bila kartu grafis gagal saat proses, ulangi otomatis di prosesor biasa
-  async function runModel(key, data) {
-    const m = MODELS[key];
-    let sess = aiSessions[key];
-    try { return await runTensor(sess, data, m.in); }
-    catch (e) {
-      if (!sess.__gpu || m.gpuOnly || !aiData[key]) throw m.gpuOnly ? new Error("gpu-only") : e;
-      console.warn("Kartu grafis gagal, ulangi di prosesor biasa", e);
-      sess = await createSession(key, aiData[key], false); aiSessions[key] = sess;
-      return await runTensor(sess, data, m.in);
-    } finally { aiData[key] = null; }
-  }
+  async function runModel(key, data) { return runTensor(aiSessions[key], data, MODELS[key].in); }
   // ubah foto jadi angka yang dimengerti model (ukuran & normalisasi sama seperti saat model dilatih)
   function preprocess(img, m, sx = 0, sy = 0, sw = img.width, sh = img.height) {
     const IN = m.in, c = document.createElement("canvas"); c.width = IN; c.height = IN;
@@ -1741,27 +1721,15 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     const prog = (f, t) => { bar.style.width = Math.round(f * 100) + "%"; msg.textContent = t || `Mengunduh model AI… ${Math.round(f * 100)}%`; };
     const pause = () => new Promise((r) => setTimeout(r, 60));
     try {
-      let key2 = aiModel;
+      const key2 = aiModel;
       prog(0, aiSessions[key2] ? "Menyiapkan…" : "Memuat mesin AI…");
-      try { await getAISession(key2, prog); }
-      catch (e) {
-        if (String(e.message) !== "gpu-only") throw e;
-        toast("HP ini belum mendukung mode Terbaik, memakai Detail");
-        key2 = aiModel = "detail"; await getAISession(key2, prog);
-      }
+      await getAISession(key2, prog);
       const m = MODELS[key2], IN = m.in, orig = state.base, W = orig.width, H = orig.height;
       const slow = IN > 320 ? " (bisa 5–40 detik, jangan tutup aplikasi)" : "";
       prog(1, (m.twoPass ? "Tahap 1/2: mencari objek…" : "Memisahkan objek dari latar…") + slow);
       await pause();
-      let p1;
-      try { p1 = toProb(await runModel(key2, preprocess(orig, m)), m); }
-      catch (e) {
-        if (String(e.message) !== "gpu-only") throw e;
-        toast("Mode Terbaik gagal di HP ini, memakai Detail");
-        key2 = aiModel = "detail"; await getAISession(key2, prog);
-        p1 = toProb(await runModel(key2, preprocess(orig, MODELS.detail)), MODELS.detail);
-      }
-      const mm = MODELS[key2];
+      const p1 = toProb(await runModel(key2, preprocess(orig, m)), m);
+      const mm = m;
       // masker penuh pada resolusi kerja
       const sc = Math.min(1, MASK_MAX / Math.max(W, H));
       const mw = Math.max(1, Math.round(W * sc)), mh = Math.max(1, Math.round(H * sc));
@@ -1803,11 +1771,13 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     px.imageSmoothingQuality = "high"; px.drawImage(orig, 0, 0, mw, mh);
     aiS = {
       orig, mw, mh, rawA: raw.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, mw, mh), px: px.getImageData(0, 0, mw, mh).data,
+      tap: "off", taps: [],
       base: mkCanvas(mw, mh), mask: mkCanvas(mw, mh), add: mkCanvas(mw, mh), erase: mkCanvas(mw, mh),
       bg: "transparent", color: "#FFFFFF", blur: 12, feather: 2, hard: 0, brush: "off", bsize: 34, smart: true,
     };
+    aiS.modelA = new Uint8ClampedArray(aiS.rawA.data);
     selId = null; syncLayerUI();
-    rebuildBase(); rebuildMask(); syncAIUI(); updateHistoryBtns();
+    rebuildBase(); rebuildMask(); syncAIUI(); updateHistoryBtns(); drawPts();
   }
   window.__aiState = () => aiS;
   // ketegasan: menajamkan peralihan tepi masker
@@ -1857,7 +1827,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     });
   }
   function endAI() {
-    aiS = null; $("#brushCur").hidden = true;
+    aiS = null; $("#brushCur").hidden = true; $("#pts").innerHTML = ""; tapMsg("");
     updateHistoryBtns(); syncAIUI();
   }
   function applyAI(auto) {
@@ -1943,6 +1913,141 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   window.addEventListener("pointercancel", endBrush);
   $("#wrap").addEventListener("pointerleave", () => { if (!bdrag) $("#brushCur").hidden = true; });
 
+
+  // =========================================================
+  // KETUK OBJEK (SlimSAM): ketuk ✅ untuk menambah bagian yang hilang, ❌ untuk membuang bagian yang salah.
+  // Setiap ketukan → SAM memilih satu bagian utuh di titik itu → digabung dengan hasil model.
+  // =========================================================
+  const SAM_REV = "5850ab45f587c112167512ffef949107115e26a0";
+  const SAM = {
+    enc: { parts: [HF + `Xenova/slimsam-77-uniform/resolve/${SAM_REV}/onnx/vision_encoder_quantized.onnx`], size: 8.88e6 },
+    dec: { parts: [HF + `Xenova/slimsam-77-uniform/resolve/${SAM_REV}/onnx/prompt_encoder_mask_decoder_quantized.onnx`], size: 4.9e6 },
+  };
+  window.__SAM = SAM;
+  let samSess = null, samBusy = false;
+  const tapMsg = (t) => { const el = $("#tapMsg"); el.hidden = !t; el.textContent = t || ""; };
+  async function getSam() {
+    if (samSess) return samSess;
+    await loadORT();
+    const encB = await fetchParts(SAM.enc.parts, SAM.enc.size, (f) => tapMsg(`Mengunduh AI ketuk objek… ${Math.round(f * 60)}%`));
+    const decB = await fetchParts(SAM.dec.parts, SAM.dec.size, (f) => tapMsg(`Mengunduh AI ketuk objek… ${60 + Math.round(f * 40)}%`));
+    tapMsg("Menyalakan AI ketuk objek…");
+    samSess = { enc: await createSession(encB), dec: await createSession(decB) };
+    return samSess;
+  }
+  // gambar diperkecil hingga sisi terpanjang 1024, dinormalisasi, lalu diberi bantalan sampai 1024×1024
+  async function samEmbed(img) {
+    if (aiS.samE && aiS.samE.img === img) return aiS.samE;
+    const S = 1024, W = img.width, H = img.height, sc = S / Math.max(W, H);
+    const rw = Math.round(W * sc), rh = Math.round(H * sc);
+    const c = mkCanvas(S, S), x = c.getContext("2d", { willReadFrequently: true });
+    x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, rw, rh);
+    const d = x.getImageData(0, 0, S, S).data, n = S * S, t = new Float32Array(3 * n), { mean, std } = IMGNET;
+    for (let yy = 0; yy < rh; yy++) for (let xx = 0; xx < rw; xx++) {
+      const p = yy * S + xx;
+      for (let ch = 0; ch < 3; ch++) t[ch * n + p] = (d[p * 4 + ch] / 255 - mean[ch]) / std[ch];
+    }
+    const enc = samSess.enc, ort = window.ort;
+    const out = await enc.run({ [enc.inputNames[0]]: new ort.Tensor("float32", t, [1, 3, S, S]) });
+    const pick = (k) => out[enc.outputNames.find((nm) => nm.includes(k)) || enc.outputNames[k === "positional" ? 1 : 0]];
+    aiS.samE = { img, sc, rw, rh, emb: pick("image_embeddings"), pos: pick("positional") };
+    return aiS.samE;
+  }
+  // satu titik (koordinat foto asli) → masker 0..255 seukuran masker kerja
+  async function samMask(ix, iy) {
+    const E = await samEmbed(aiS.orig), dec = samSess.dec, ort = window.ort;
+    const feeds = {};
+    for (const nm of dec.inputNames) {
+      if (nm.includes("positional")) feeds[nm] = E.pos;
+      else if (nm.includes("embeddings")) feeds[nm] = E.emb;
+      else if (nm.includes("points")) feeds[nm] = new ort.Tensor("float32", new Float32Array([ix * E.sc, iy * E.sc]), [1, 1, 1, 2]);
+      else if (nm.includes("labels")) feeds[nm] = new ort.Tensor("int64", new BigInt64Array([1n]), [1, 1, 1]);
+    }
+    const out = await dec.run(feeds);
+    const iou = out[dec.outputNames.find((nm) => nm.includes("iou")) || dec.outputNames[0]].data;
+    const pm = out[dec.outputNames.find((nm) => nm.includes("mask")) || dec.outputNames[1]];
+    let best = 0; for (let k = 1; k < iou.length; k++) if (iou[k] > iou[best]) best = k;
+    const L = 256, off = best * L * L, img = new ImageData(L, L), pd = pm.data;
+    for (let i = 0; i < L * L; i++) img.data[i * 4 + 3] = 255 / (1 + Math.exp(-pd[off + i]));
+    const lc = mkCanvas(L, L); lc.getContext("2d").putImageData(img, 0, 0);
+    // buang bantalan: area sah = rw×rh dari 1024 → (rw/4)×(rh/4) dari 256
+    const mc = mkCanvas(aiS.mw, aiS.mh), mx = mc.getContext("2d", { willReadFrequently: true });
+    mx.imageSmoothingQuality = "high"; mx.drawImage(lc, 0, 0, E.rw * L / 1024, E.rh * L / 1024, 0, 0, aiS.mw, aiS.mh);
+    const a = mx.getImageData(0, 0, aiS.mw, aiS.mh).data, m = new Uint8ClampedArray(aiS.mw * aiS.mh);
+    for (let i = 0; i < m.length; i++) m[i] = a[i * 4 + 3];
+    return { m, score: iou[best] };
+  }
+  window.__samMask = samMask;
+  // hasil akhir = (hasil model ∪ bagian ✅) dikurangi bagian ❌
+  function applyTaps() {
+    const S = aiS, n = S.mw * S.mh, base = S.modelA, out = S.rawA.data;
+    const add = new Uint8ClampedArray(n), cut = new Uint8ClampedArray(n);
+    for (const t of S.taps) { if (!t.m) continue; const dst = t.label === "add" ? add : cut; for (let i = 0; i < n; i++) if (t.m[i] > dst[i]) dst[i] = t.m[i]; }
+    for (let i = 0; i < n; i++) {
+      let v = Math.max(base[i * 4 + 3], add[i]);
+      const c = Math.min(255, cut[i] * 1.3);
+      out[i * 4 + 3] = v * (1 - c / 255);
+    }
+    rebuildBase(); rebuildMask(); drawPts();
+  }
+  window.__applyTaps = applyTaps;
+  function drawPts() {
+    const box = $("#pts"); box.innerHTML = "";
+    if (!aiS) return;
+    const pb = photoBox();
+    for (const t of aiS.taps) {
+      const d = document.createElement("div"); d.className = "pt " + t.label; d.textContent = t.label === "add" ? "+" : "−";
+      d.style.left = pb.x + (t.x / aiS.orig.width) * pb.w + "px"; d.style.top = pb.y + (t.y / aiS.orig.height) * pb.h + "px";
+      box.appendChild(d);
+    }
+    $("#tapActs").hidden = !aiS.taps.length || aiS.tap === "off";
+  }
+  async function addTap(ix, iy) {
+    if (samBusy) return;
+    const label = aiS.tap, t = { x: ix, y: iy, label, m: null };
+    aiS.taps.push(t); drawPts();
+    samBusy = true;
+    try {
+      const fresh = !samSess;
+      await getSam();
+      if (fresh || !aiS.samE) tapMsg("Memahami isi foto… (sekali per foto)");
+      await new Promise((r) => setTimeout(r, 30));
+      await samEmbed(aiS.orig);
+      tapMsg("Memilih bagian…");
+      const r = await samMask(ix, iy);
+      if (!aiS || !aiS.taps.includes(t)) return;
+      t.m = r.m; applyTaps(); tapMsg("");
+    } catch (e) {
+      console.error(e);
+      if (aiS) { aiS.taps = aiS.taps.filter((x) => x !== t); drawPts(); }
+      const m = String(e && e.message);
+      tapMsg(m === "net" ? "AI ketuk objek gagal diunduh. Periksa internetmu lalu coba lagi." : "Gagal memilih bagian. Coba ketuk lagi.");
+    } finally { samBusy = false; }
+  }
+  // ketukan dibedakan dari geser/cubit: titik ditambah saat jari diangkat tanpa banyak bergerak
+  let tapStart = null;
+  function tapDown(e) {
+    e.preventDefault();
+    tapStart = { x: e.clientX, y: e.clientY, lp: localPt(e), t: Date.now() };
+  }
+  window.addEventListener("pointerup", (e) => {
+    if (!tapStart || !aiS || aiS.tap === "off") { tapStart = null; return; }
+    const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y), st = tapStart; tapStart = null;
+    if (moved > 12 || pinch) return;
+    const pb = photoBox(), fx = (st.lp.x - pb.x) / pb.w, fy = (st.lp.y - pb.y) / pb.h;
+    if (fx < 0 || fy < 0 || fx > 1 || fy > 1) return;
+    addTap(fx * aiS.orig.width, fy * aiS.orig.height);
+  });
+  $("#tapMode").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || !aiS) return;
+    aiS.tap = b.dataset.t;
+    if (aiS.tap !== "off") { aiS.brush = "off"; $("#brushCur").hidden = true; if (!samSess) getSam().then(() => tapMsg("Ketuk bagian foto"), (err) => tapMsg(String(err && err.message) === "net" ? "AI ketuk objek gagal diunduh. Periksa internetmu." : "AI ketuk objek gagal dimuat.")); else tapMsg("Ketuk bagian foto"); }
+    else tapMsg("");
+    syncAIUI(); drawPts();
+  });
+  $("#tapUndo").addEventListener("click", () => { if (!aiS || samBusy) return; aiS.taps.pop(); applyTaps(); });
+  $("#tapClear").addEventListener("click", () => { if (!aiS || samBusy) return; aiS.taps = []; applyTaps(); });
+
   // kontrol panel AI
   $("#models").addEventListener("click", (e) => {
     const b = e.target.closest(".mbtn"); if (!b || aiBusy) return;
@@ -1958,7 +2063,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   $("#bgBlur").addEventListener("input", (e) => { if (!aiS) return; aiS.blur = +e.target.value; $("#bgBlurVal").textContent = e.target.value; aiPreview(); });
   $("#brushMode").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b || !aiS) return;
-    aiS.brush = b.dataset.b; if (aiS.brush === "off") $("#brushCur").hidden = true; syncAIUI();
+    aiS.brush = b.dataset.b; if (aiS.brush === "off") $("#brushCur").hidden = true; else { aiS.tap = "off"; tapMsg(""); }
+    syncAIUI(); drawPts();
   });
   $("#bSmart").addEventListener("change", (e) => { if (aiS) aiS.smart = e.target.checked; });
   $("#bSize").addEventListener("input", (e) => { if (!aiS) return; aiS.bsize = +e.target.value; $("#bSizeVal").textContent = e.target.value; });
@@ -1968,8 +2074,6 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   openCache().then((c) => c && c.keys().then((ks) => ks.forEach((r) => { if (/silueta-/.test(r.url)) c.delete(r); }))).catch(() => {});
   function syncAIUI() {
     $("#aiViewerNote").hidden = !inViewer;
-    if (gpuOK === null && !inViewer) checkGPU().then(() => { $("#models [data-m=terbaik]").hidden = !MODELS.terbaik.ok; });
-    else $("#models [data-m=terbaik]").hidden = !MODELS.terbaik.ok;
     $("#models").hidden = !!aiS;
     $("#aiEdit").hidden = !aiS;
     if (aiS) {
@@ -1979,6 +2083,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       $("#brushMode").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.b === aiS.brush));
       $("#brushRow").hidden = aiS.brush === "off"; $("#smartRow").hidden = aiS.brush === "off";
       $("#bSmart").checked = aiS.smart;
+      $("#tapMode").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === aiS.tap));
       $("#bSize").value = aiS.bsize; $("#bSizeVal").textContent = aiS.bsize;
       $("#aiFeather").value = aiS.feather; $("#aiFeatherVal").textContent = aiS.feather;
       $("#aiHard").value = aiS.hard; $("#aiHardVal").textContent = aiS.hard;
