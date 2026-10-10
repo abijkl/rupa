@@ -186,7 +186,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 .mbtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .mbtn:disabled{opacity:.45;cursor:default}
 .welcome{position:fixed;inset:0;z-index:4;background:var(--bg);display:flex;justify-content:center;overflow-y:auto}
-.wcontent{width:100%;max-width:520px;display:flex;flex-direction:column;justify-content:center;gap:28px;padding:calc(32px + env(safe-area-inset-top,0px)) 24px calc(32px + env(safe-area-inset-bottom,0px))}
+.wcontent{width:100%;max-width:520px;display:flex;flex-direction:column;justify-content:center;gap:24px;min-height:100%;padding:calc(32px + env(safe-area-inset-top,0px)) 24px calc(32px + env(safe-area-inset-bottom,0px))}
 .wmark{display:flex;align-items:center;gap:12px;font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:-.02em}
 .wlogo{width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:24px}
 .wtitle{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,10vw,46px);line-height:1.05;letter-spacing:-.025em;margin:0;text-wrap:balance}
@@ -205,6 +205,20 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
 .wresume small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
 .wresume .go{margin-left:auto;font-size:22px;color:var(--accent)}
 .homebtn{margin-right:-2px}
+.projs{display:flex;flex-direction:column;gap:8px}
+.projs h2{margin:4px 0 2px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.pitem{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:6px}
+.pitem.cur{border-color:var(--accent)}
+.popen{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;text-align:left}
+.popen img{width:52px;height:52px;border-radius:9px;object-fit:cover;flex:none;background:repeating-conic-gradient(#3B3B42 0% 25%, #26262B 0% 50%) 50%/12px 12px}
+.popen b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.popen small{display:block;font-size:12px;color:var(--muted);margin-top:2px;font-family:var(--f-mono)}
+.popen span{min-width:0}
+.pmore{width:40px;height:40px;border-radius:10px;border:0;background:transparent;font-size:20px;line-height:1;flex:none;color:var(--muted)}
+.dlgbox input{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 12px;width:100%}
+.sheetbtns{display:flex;flex-direction:column;gap:8px}
+.sheetbtns .btn{width:100%;justify-content:flex-start;min-height:46px;padding:12px 16px;font-size:15px;border-radius:12px}
+.sheetbtns .danger{color:#F3A196}
 .dlg{position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .dlgbox{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;margin-bottom:env(safe-area-inset-bottom,0px)}
 .dlgbox h3{margin:0;font-family:var(--f-display);font-size:19px}
@@ -248,7 +262,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
         <input type="file" id="wCol" accept="image/*" multiple class="filein">
       </label>
     </div>
-    <p class="wfoot">Gratis · semua diproses di HP-mu</p>
+    <div class="projs" id="projs" hidden><h2>Proyek terakhir</h2><div class="projs" id="projList"></div></div>
+    <p class="wfoot">Gratis · semua diproses &amp; disimpan di HP-mu</p>
   </div>
 </section>
 
@@ -500,10 +515,17 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   </nav>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="dlg" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="dlgbox">
+    <h3 id="sheetTitle"></h3>
+    <div class="sheetbtns" id="sheetBtns"></div>
+  </div>
+</div>
 <div class="dlg" id="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
   <div class="dlgbox">
     <h3 id="dlgTitle"></h3>
     <p id="dlgText"></p>
+    <input id="dlgInput" maxlength="60" hidden aria-label="Nama proyek">
     <div class="actions"><button class="btn" id="dlgNo">Batal</button><button class="btn primary" id="dlgYes">Ya</button></div>
   </div>
 </div>
@@ -766,6 +788,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     past.push(snapshot());
     if (past.length > MAX_HISTORY) past.shift();
     future = []; updateHistoryBtns();
+    if (typeof scheduleSave === "function") scheduleSave();
   }
   function restore(s) {
     const baseChanged = s.base !== state.base;
@@ -775,8 +798,8 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (baseChanged) buildPreview(); else { pixelsDirty = true; render(); }
     syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI();
   }
-  function undo() { if (aiS) return; if (past.length > 1) { future.push(past.pop()); restore(past[past.length - 1]); updateHistoryBtns(); } }
-  function redo() { if (aiS) return; if (future.length) { const s = future.pop(); past.push(s); restore(s); updateHistoryBtns(); } }
+  function undo() { if (aiS) return; if (past.length > 1) { future.push(past.pop()); restore(past[past.length - 1]); updateHistoryBtns(); scheduleSave(); } }
+  function redo() { if (aiS) return; if (future.length) { const s = future.pop(); past.push(s); restore(s); updateHistoryBtns(); scheduleSave(); } }
   function updateHistoryBtns() { $("#undo").disabled = past.length <= 1 || !!aiS; $("#redo").disabled = future.length === 0 || !!aiS; }
   const getSel = () => state.layers.find((l) => l.id === selId) || null;
 
@@ -1589,6 +1612,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     renderCollage(x, W, H, false);
     state.base = c; state.adj = zeroAdj(); state.filter = { id: "none", amt: 100 }; state.layers = []; state.isSample = false;
     selId = null; fileName = "kolase";
+    newProject("Kolase");
     switchTab("atur");
     buildPreview(); syncSliders(); syncFilterUI(); syncLayerUI(); commit();
     toast("Kolase jadi. Sekarang bisa diedit seperti foto biasa.");
@@ -2142,8 +2166,9 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       state.base = c; state.adj = zeroAdj(); state.filter = { id: "none", amt: 100 }; state.layers = []; state.isSample = false;
       if (currentTab !== "atur") switchTab("atur");
       selId = null; past = []; future = [];
-      buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
       fileName = (f.name || "foto").replace(/\.[^.]+$/, "") || "foto";
+      state.frame = { ...NOFRAME }; newProject(fileName);
+      buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); commit();
       col.cells[0] = newCell(c);
       showEditor();
       toast("Foto dibuka");
@@ -2271,7 +2296,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       col.layout = n <= 2 ? "2v" : n === 3 ? "3a" : n === 4 ? "4g" : n === 5 ? "5a" : n === 6 ? "6g" : "9g";
       col.cells = []; col.sel = -1;
       if (aiS) endAI();
-      state.base = null; state.layers = []; selId = null; past = []; future = []; previewSrc = null; updateHistoryBtns();
+      state.base = null; state.layers = []; selId = null; past = []; future = []; previewSrc = null; updateHistoryBtns(); curProj = null;
       showEditor();
       switchTab("kolase");
       loadIntoCells(files, null);
@@ -2287,13 +2312,15 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   const hasWork = () => !!state.base || col.cells.some((c) => c && c.img);
   function showEditor() {
     $("#welcome").hidden = true;
-    if (!history.state || history.state.rupa !== "editor") { try { history.pushState({ rupa: "editor" }, ""); } catch (e) {} }
+    if (!history.state || history.state.rupa !== "editor") { try { if (history.state && history.state.rupa === "modal") history.replaceState({ rupa: "editor" }, ""); else history.pushState({ rupa: "editor" }, ""); } catch (e) {} }
     requestAnimationFrame(() => { fitView(); if (currentTab === "kolase") fitCollage(); });
   }
   function showWelcome() {
     if (aiS) applyAI(true);
     selId = null; syncLayerUI();
-    const can = hasWork();
+    flushSave().then(renderProjects);
+    // kartu "Lanjutkan edit" hanya untuk pekerjaan yang belum jadi proyek (kolase belum dipakai, atau penyimpanan HP tidak tersedia)
+    const can = hasWork() && !(DB.ok && curProj && state.base);
     $("#wResume").hidden = !can;
     if (can) {
       const t = $("#wThumb"), x = t.getContext("2d"), src = state.base ? view : colView;
@@ -2302,7 +2329,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
       x.drawImage(src, (t.width - w) / 2, (t.height - h) / 2, w, h);
     }
     $("#welcome").hidden = false; $("#toast").hidden = true;
-    hideDlg();
+    hideDlg(); hideSheet();
   }
   window.__nav = { showWelcome, showEditor, inEditor };
   // tombol kembali di aplikasi: pakai riwayat browser supaya tombol back HP tetap sinkron
@@ -2310,7 +2337,7 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
     if (history.state && history.state.rupa === "editor") history.back(); else showWelcome();
   });
   window.addEventListener("popstate", () => {
-    if (!$("#dlg").hidden) { hideDlg(); if (inEditor()) { try { history.pushState({ rupa: "editor" }, ""); } catch (e) {} } return; }
+    if (!$("#dlg").hidden || !$("#sheet").hidden) { hideDlg(); hideSheet(); if (inEditor()) { try { history.pushState({ rupa: "editor" }, ""); } catch (e) {} } return; }
     if (inEditor()) showWelcome();
   });
   $("#wResume").addEventListener("click", () => {
@@ -2321,19 +2348,210 @@ textarea{width:100%;min-height:58px;resize:vertical;border-radius:10px;border:1p
   let dlgYes = null;
   function askDlg(title, text, yesLabel, onYes) {
     $("#dlgTitle").textContent = title; $("#dlgText").textContent = text; $("#dlgYes").textContent = yesLabel;
-    dlgYes = onYes; $("#dlg").hidden = false; $("#dlgNo").focus();
+    dlgYes = onYes; $("#dlg").hidden = false; $("#dlgNo").focus(); modalOpened();
   }
-  function hideDlg() { $("#dlg").hidden = true; dlgYes = null; }
+  function hideDlg() { $("#dlg").hidden = true; $("#dlgInput").hidden = true; dlgYes = null; modalClosed(); }
+  // di layar awal: tombol kembali HP menutup menu/dialog dulu, bukan menutup aplikasi
+  function modalOpened() { if (!inEditor() && !(history.state && history.state.rupa === "modal")) { try { history.pushState({ rupa: "modal" }, ""); } catch (e) {} } }
+  function modalClosed() { setTimeout(() => { if (!inEditor() && history.state && history.state.rupa === "modal" && $("#dlg").hidden && $("#sheet").hidden) history.back(); }, 0); }
   $("#dlgNo").addEventListener("click", hideDlg);
   $("#dlg").addEventListener("click", (e) => { if (e.target.id === "dlg") hideDlg(); });
-  $("#dlgYes").addEventListener("click", () => { const f = dlgYes; hideDlg(); if (f) f(); });
+  $("#dlgYes").addEventListener("click", () => { const f = dlgYes, v = $("#dlgInput").value; hideDlg(); if (f) f(v); });
+  $("#dlgInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("#dlgYes").click(); } });
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#dlg").hidden) hideDlg(); });
   // membuka foto/kolase baru saat masih ada hasil edit → tanya dulu
   function confirmReplace(go) {
     if (!hasWork()) { go(); return; }
+    // hasil edit sekarang sudah tersimpan sebagai proyek → langsung mulai yang baru
+    if (DB.ok && curProj && state.base) { flushSave().then(go); return; }
     askDlg("Mulai edit baru?", "Hasil edit yang sekarang akan diganti dan tidak bisa dikembalikan.", "Mulai baru", go);
   }
   window.__askDlg = askDlg;
+  const _askDlg = askDlg;
+  askDlg = function (t, x, y, f) { $("#dlgText").hidden = false; _askDlg(t, x, y, f); };
+
+  // =========================================================
+  // DRAF PROYEK: simpan otomatis ke memori HP (IndexedDB), daftar proyek di menu awal
+  // Disimpan: foto dasar (setelah potong/putar/hapus latar), pengaturan, filter, bingkai, teks.
+  // Tidak disimpan: riwayat urungkan.
+  // =========================================================
+  const DB = { db: null, ok: true };
+  function idb() {
+    if (DB.db) return Promise.resolve(DB.db);
+    return new Promise((res, rej) => {
+      let r; try { r = indexedDB.open("rupa", 1); } catch (e) { rej(e); return; }
+      r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains("projects")) d.createObjectStore("projects", { keyPath: "id" }); if (!d.objectStoreNames.contains("images")) d.createObjectStore("images"); };
+      r.onsuccess = () => { DB.db = r.result; res(DB.db); };
+      r.onerror = () => rej(r.error);
+    });
+  }
+  function dbReq(store, mode, make) {
+    return idb().then((db) => new Promise((res, rej) => {
+      const t = db.transaction(store, mode), q = make(t.objectStore(store));
+      let out; q.onsuccess = () => { out = q.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    }));
+  }
+  const dbPut = (st, v, k) => dbReq(st, "readwrite", (o) => (k === undefined ? o.put(v) : o.put(v, k)));
+  const dbGet = (st, k) => dbReq(st, "readonly", (o) => o.get(k));
+  const dbAll = (st) => dbReq(st, "readonly", (o) => o.getAll());
+  const dbDel = (st, k) => dbReq(st, "readwrite", (o) => o.delete(k));
+  idb().catch(() => { DB.ok = false; });
+
+  let curProj = null, saveTimer = 0, saving = Promise.resolve(), savedBase = null, dirty = false, saveCount = 0;
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function newProject(name) {
+    const now = Date.now();
+    curProj = { id: newId(), name: name || "Foto", created: now, updated: now };
+    savedBase = null; dirty = true;
+  }
+  function scheduleSave() {
+    if (!DB.ok || !curProj || !state.base) return;
+    dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 1200);
+  }
+  function flushSave() {
+    clearTimeout(saveTimer);
+    if (!DB.ok || !dirty || !curProj || !state.base) return saving;
+    dirty = false;
+    saving = saving.then(doSave).catch((e) => { console.warn("Gagal menyimpan draf", e); toast("Draf gagal disimpan. Memori HP mungkin penuh."); });
+    return saving;
+  }
+  const toBlob = (c, type, q) => new Promise((r) => c.toBlob(r, type, q));
+  function makeThumb() {
+    const S = 160, src = view, t = mkCanvas(S, S), x = t.getContext("2d");
+    const k = Math.max(S / src.width, S / src.height), w = src.width * k, h = src.height * k;
+    x.drawImage(src, (S - w) / 2, (S - h) / 2, w, h);
+    return toBlob(t, "image/webp", 0.8);
+  }
+  const plainLayer = (l) => { const o = {}; for (const k in l) if (k !== "img") o[k] = l[k]; return o; };
+  async function doSave() {
+    const P = curProj, base = state.base;
+    if (!P || !base) return;
+    if (savedBase !== base) {
+      // webp kualitas tinggi: kecil, dan tetap menyimpan bagian transparan
+      const blob = await toBlob(base, "image/webp", 0.95);
+      if (!blob) throw new Error("encode");
+      await dbPut("images", { blob }, P.id);
+      savedBase = base;
+    }
+    Object.assign(P, {
+      updated: Date.now(), w: base.width, h: base.height, fileName,
+      adj: { ...state.adj }, filter: { ...state.filter }, frame: { ...state.frame },
+      layers: state.layers.map(plainLayer), thumb: await makeThumb(),
+    });
+    await dbPut("projects", P);
+    if (++saveCount === 1 && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if (saveCount % 15 === 1) checkStorage();
+  }
+  async function checkStorage() {
+    try {
+      const e = navigator.storage && navigator.storage.estimate && await navigator.storage.estimate();
+      if (e && e.quota && e.usage / e.quota > 0.85) toast("Memori untuk draf hampir penuh. Hapus proyek lama di menu awal.");
+    } catch (e) {}
+  }
+  window.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushSave(); });
+  window.addEventListener("pagehide", () => flushSave());
+
+  async function openProject(id) {
+    if (curProj && curProj.id === id && state.base) { showEditor(); if (currentTab === "kolase") switchTab("atur"); return; }
+    await flushSave();
+    try {
+      const P = await dbGet("projects", id), rec = await dbGet("images", id);
+      if (!P || !rec) { toast("Proyek ini tidak bisa dibuka"); renderProjects(); return; }
+      const bmp = await createImageBitmap(rec.blob);
+      const c = mkCanvas(bmp.width, bmp.height); c.getContext("2d").drawImage(bmp, 0, 0); bmp.close && bmp.close();
+      if (aiS) endAI();
+      state.base = c; state.adj = { ...zeroAdj(), ...(P.adj || {}) }; state.filter = P.filter || { id: "none", amt: 100 };
+      state.frame = P.frame || { ...NOFRAME }; state.layers = (P.layers || []).map((l) => ({ ...l })); state.isSample = false;
+      nextId = Math.max(nextId, ...state.layers.map((l) => (l.id || 0) + 1));
+      for (const l of state.layers) { const f = FONT_BY_ID[l.font]; if (f && f.state !== "loaded" && f.src === "google") loadFont(f).catch(() => {}); }
+      fileName = P.fileName || "foto"; curProj = P; savedBase = c; dirty = false;
+      selId = null; past = []; future = [];
+      if (currentTab !== "atur") switchTab("atur");
+      buildPreview(); syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI();
+      past.push(snapshot()); updateHistoryBtns();
+      col.cells = [newCell(c)];
+      showEditor();
+      toast(`Proyek "${P.name}" dibuka`);
+    } catch (e) { console.error(e); toast("Proyek ini tidak bisa dibuka"); }
+  }
+  window.__proj = { flushSave, openProject, cur: () => curProj, all: () => dbAll("projects") };
+
+  let thumbURLs = [];
+  const fmtDate = (t) => new Date(t).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  async function renderProjects() {
+    if (!DB.ok) { $("#projs").hidden = true; return; }
+    let list = [];
+    try { list = await dbAll("projects"); } catch (e) { DB.ok = false; $("#projs").hidden = true; return; }
+    list.sort((a, b) => b.updated - a.updated);
+    thumbURLs.forEach((u) => URL.revokeObjectURL(u)); thumbURLs = [];
+    const box = $("#projList"); box.innerHTML = "";
+    for (const P of list) {
+      const row = document.createElement("div"); row.className = "pitem" + (curProj && curProj.id === P.id && state.base ? " cur" : "");
+      const open = document.createElement("button"); open.className = "popen"; open.dataset.id = P.id;
+      const img = document.createElement("img"); img.alt = "";
+      if (P.thumb) { const u = URL.createObjectURL(P.thumb); thumbURLs.push(u); img.src = u; }
+      const txt = document.createElement("span"), b = document.createElement("b"), sm = document.createElement("small");
+      b.textContent = P.name; sm.textContent = `${fmtDate(P.updated)} · ${P.w}×${P.h}`;
+      txt.append(b, sm); open.append(img, txt);
+      open.addEventListener("click", () => openProject(P.id));
+      const more = document.createElement("button"); more.className = "pmore"; more.textContent = "⋯"; more.setAttribute("aria-label", "Pilihan proyek " + P.name);
+      more.addEventListener("click", () => projMenu(P));
+      row.append(open, more); box.appendChild(row);
+    }
+    $("#projs").hidden = !list.length;
+  }
+  function showSheet(title, items) {
+    $("#sheetTitle").textContent = title;
+    const box = $("#sheetBtns"); box.innerHTML = "";
+    for (const it of items) {
+      const b = document.createElement("button"); b.className = "btn" + (it.danger ? " danger" : ""); b.textContent = it.label;
+      b.addEventListener("click", () => { it.run && it.run(); hideSheet(); });
+      box.appendChild(b);
+    }
+    $("#sheet").hidden = false; modalOpened();
+  }
+  function hideSheet() { $("#sheet").hidden = true; modalClosed(); }
+  $("#sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") hideSheet(); });
+  function projMenu(P) {
+    showSheet(P.name, [
+      { label: "Buka", run: () => openProject(P.id) },
+      { label: "Ganti nama", run: () => renameProject(P) },
+      { label: "Gandakan", run: () => duplicateProject(P) },
+      { label: "Hapus", danger: true, run: () => askDlg("Hapus proyek?", `"${P.name}" akan dihapus dari HP ini dan tidak bisa dikembalikan.`, "Hapus", () => deleteProject(P)) },
+      { label: "Batal" },
+    ]);
+  }
+  function renameProject(P) {
+    askDlg("Ganti nama proyek", "", "Simpan", async (v) => {
+      const name = String(v || "").trim().slice(0, 60); if (!name) return;
+      const rec = await dbGet("projects", P.id); if (!rec) return;
+      rec.name = name; await dbPut("projects", rec);
+      if (curProj && curProj.id === P.id) curProj.name = name;
+      renderProjects(); toast("Nama proyek diganti");
+    });
+    $("#dlgText").hidden = true; const inp = $("#dlgInput"); inp.hidden = false; inp.value = P.name; inp.focus(); inp.select();
+  }
+  async function duplicateProject(P) {
+    try {
+      await flushSave();
+      const rec = await dbGet("projects", P.id), img = await dbGet("images", P.id); if (!rec || !img) return;
+      const now = Date.now(), cp = { ...rec, id: newId(), name: rec.name + " (salinan)", created: now, updated: now };
+      await dbPut("images", img, cp.id); await dbPut("projects", cp);
+      renderProjects(); toast("Proyek digandakan");
+    } catch (e) { toast("Gagal menggandakan. Memori HP mungkin penuh."); }
+  }
+  async function deleteProject(P) {
+    await dbDel("projects", P.id); await dbDel("images", P.id);
+    if (curProj && curProj.id === P.id) {
+      clearTimeout(saveTimer); dirty = false; curProj = null; savedBase = null;
+      if (aiS) endAI();
+      state.base = null; state.layers = []; previewSrc = null; past = []; future = []; updateHistoryBtns(); col.cells = [];
+      $("#wResume").hidden = true; $("#dims").textContent = "—";
+    }
+    renderProjects(); toast("Proyek dihapus");
+  }
+  renderProjects();
   syncSliders(); syncFilterUI(); syncFrameUI(); syncLayerUI(); applyZoom();
   window.__state = state;
   // mode aplikasi (PWA): hanya aktif saat Rupa di-hosting sendiri

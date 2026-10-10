@@ -26,5 +26,8 @@ CARA UPDATE
 CATATAN
   - Setiap model AI diunduh sekali saat pertama dipakai, lalu tersimpan di HP dan bisa dipakai offline.
     Pakai WiFi saat pertama mencoba Orang dan Ketuk objek.
+  - Proyek (draf) tersimpan otomatis di penyimpanan Chrome HP-mu, bukan di GitHub.
+    Draf akan hilang kalau kamu menghapus data situs/riwayat Chrome untuk abijkl.github.io
+    atau meng-uninstall Rupa. Simpan hasil akhir ke galeri lewat tab Simpan.
   - Lisensi model: u2netp & IS-Net (Apache-2.0), ORMBG (Apache-2.0), SlimSAM (Apache-2.0).
     Sebagian data latihnya (misalnya DIS5K, P3M-10K) hanya untuk riset; cek ulang sebelum Rupa dimonetisasi.
